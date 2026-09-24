@@ -7,15 +7,85 @@ const CONFIG = {
   volume: 0.7,
 };
 
+// ---------- idiomas ----------
+
+const I18N = {
+  pt: {
+    tapToStart: 'toque para começar',
+    loading: 'carregando…',
+    photoError: 'não foi possível carregar as fotos',
+    loadingTracks: 'carregando músicas…',
+    unknownAuthor: 'Autor desconhecido',
+    prev: 'Música anterior',
+    next: 'Próxima música',
+    play: 'Tocar',
+    pause: 'Pausar',
+    mute: 'Mutar',
+    unmute: 'Desmutar',
+    fullscreen: 'Tela cheia',
+    exitFullscreen: 'Sair da tela cheia',
+    panel: 'Playlist e estilos',
+    settings: 'Ajustes',
+    close: 'Fechar',
+    photos: 'Fotos',
+    music: 'Música',
+    language: 'Idioma',
+    playlist: 'Playlist',
+    Space: 'espaço',
+  },
+  en: {
+    tapToStart: 'tap to begin',
+    loading: 'loading…',
+    photoError: "couldn't load the photos",
+    loadingTracks: 'loading music…',
+    unknownAuthor: 'Unknown author',
+    prev: 'Previous track',
+    next: 'Next track',
+    play: 'Play',
+    pause: 'Pause',
+    mute: 'Mute',
+    unmute: 'Unmute',
+    fullscreen: 'Full screen',
+    exitFullscreen: 'Exit full screen',
+    panel: 'Playlist and styles',
+    settings: 'Settings',
+    close: 'Close',
+    photos: 'Photos',
+    music: 'Music',
+    language: 'Language',
+    playlist: 'Playlist',
+    Space: 'space',
+  },
+};
+
+const LANGUAGES = { pt: { label: 'Português' }, en: { label: 'English' } };
+
+// Fusos horários de países lusófonos: pega quem mora no Brasil/Portugal/etc. mesmo com
+// o navegador em inglês
+const PT_TIMEZONES = /^(America\/(Sao_Paulo|Fortaleza|Recife|Bahia|Belem|Maceio|Araguaina|Manaus|Cuiaba|Campo_Grande|Porto_Velho|Boa_Vista|Rio_Branco|Eirunepe|Santarem|Noronha)|Europe\/Lisbon|Atlantic\/(Madeira|Azores|Cape_Verde)|Africa\/(Luanda|Maputo|Bissau|Sao_Tome)|Asia\/(Dili|Macau))$/;
+
+function detectLang() {
+  const langs = navigator.languages?.length ? navigator.languages : [navigator.language || ''];
+  if (langs.some((l) => /^pt\b/i.test(l))) return 'pt';
+  try {
+    if (PT_TIMEZONES.test(Intl.DateTimeFormat().resolvedOptions().timeZone)) return 'pt';
+  } catch { /* sem Intl */ }
+  return 'en';
+}
+
+let lang = 'en';
+const t = (key) => I18N[lang][key] ?? key;
+const label = (item) => item.label[lang] ?? item.label;
+
 // Categorias "Featured pictures of …" do Wikimedia Commons
 const PHOTO_STYLES = {
-  paisagens: { label: 'Paisagens', categories: ['landscapes'] },
-  montanhas: { label: 'Montanhas', categories: ['mountains', 'volcanoes'] },
-  agua: { label: 'Água', categories: ['coasts', 'beaches', 'lakes', 'waterfalls', 'bodies_of_water', 'islands'] },
-  florestas: { label: 'Florestas', categories: ['forests', 'parks', 'gardens'] },
-  campo: { label: 'Campo', categories: ['agriculture'] },
-  cidades: { label: 'Cidades', categories: ['cityscapes'] },
-  tudo: { label: 'Tudo', categories: ['landscapes', 'mountains', 'coasts', 'beaches', 'lakes', 'waterfalls', 'forests', 'agriculture', 'cityscapes'] },
+  paisagens: { label: { pt: 'Paisagens', en: 'Landscapes' }, categories: ['landscapes'] },
+  montanhas: { label: { pt: 'Montanhas', en: 'Mountains' }, categories: ['mountains', 'volcanoes'] },
+  agua: { label: { pt: 'Água', en: 'Water' }, categories: ['coasts', 'beaches', 'lakes', 'waterfalls', 'bodies_of_water', 'islands'] },
+  florestas: { label: { pt: 'Florestas', en: 'Forests' }, categories: ['forests', 'parks', 'gardens'] },
+  campo: { label: { pt: 'Campo', en: 'Countryside' }, categories: ['agriculture'] },
+  cidades: { label: { pt: 'Cidades', en: 'Cities' }, categories: ['cityscapes'] },
+  tudo: { label: { pt: 'Tudo', en: 'Everything' }, categories: ['landscapes', 'mountains', 'coasts', 'beaches', 'lakes', 'waterfalls', 'forests', 'agriculture', 'cityscapes'] },
 };
 
 // Itens do Internet Archive com licença Creative Commons ou domínio público
@@ -48,14 +118,14 @@ const MUSIC_STYLES = {
     ],
   },
   classica: {
-    label: 'Clássica',
+    label: { pt: 'Clássica', en: 'Classical' },
     items: [
       'musopen-chopin',  // Musopen — Chopin completo — CC0
       'Musopen-Libre',   // Musopen — sinfonias — CC BY-SA 3.0
     ],
   },
   natureza: {
-    label: 'Natureza',
+    label: { pt: 'Natureza', en: 'Nature' },
     items: [
       'relaxingrainsounds',          // chuva — CC0
       'ocean-sea-sounds',            // oceano — CC0
@@ -78,7 +148,8 @@ const state = {
   photoStyle: 'paisagens',
   photos: [],
   photoIndex: -1,
-  front: 0,          // índice do slide visível
+  currentPhoto: null,
+  front: 0,         // índice do slide visível
   elapsed: 0,
   lastTick: 0,
   nextReady: null,   // Promise da próxima foto pré-carregada
@@ -160,7 +231,7 @@ async function fetchPhotoPage(category, cont) {
       url: info.thumburl,
       page: info.descriptionurl,
       title: p.title.replace(/^File:/, '').replace(/\.[a-z]+$/i, '').replace(/_/g, ' '),
-      artist: stripHtml(info.extmetadata?.Artist?.value) || 'Autor desconhecido',
+      artist: stripHtml(info.extmetadata?.Artist?.value),
       license: info.extmetadata?.LicenseShortName?.value || '',
     });
   }
@@ -262,9 +333,15 @@ function showPhoto({ photo, img }) {
     outgoing.classList.remove('visible');
   });
 
-  const credit = $('#photoCredit');
-  credit.replaceChildren('📷 ', creditLink(photo.title, photo.page),
-    ` — ${photo.artist}${photo.license ? ` (${photo.license})` : ''}`);
+  state.currentPhoto = photo;
+  renderPhotoCredit();
+}
+
+function renderPhotoCredit() {
+  const photo = state.currentPhoto;
+  if (!photo) return;
+  $('#photoCredit').replaceChildren('📷 ', creditLink(photo.title, photo.page),
+    ` — ${photo.artist || t('unknownAuthor')}${photo.license ? ` (${photo.license})` : ''}`);
 }
 
 async function advance() {
@@ -356,7 +433,7 @@ function playTrack(index) {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: track.title,
       artist: track.artist,
-      album: `Armony Flow · ${MUSIC_STYLES[state.musicStyle].label}`,
+      album: `Armony Flow · ${label(MUSIC_STYLES[state.musicStyle])}`,
     });
   }
 }
@@ -417,11 +494,11 @@ if ('mediaSession' in navigator) {
 
 function renderChips() {
   const build = (container, styles, current, onPick) => {
-    container.replaceChildren(...Object.entries(styles).map(([key, { label }]) => {
+    container.replaceChildren(...Object.entries(styles).map(([key, item]) => {
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.className = 'chip';
-      chip.textContent = label;
+      chip.textContent = label(item);
       chip.setAttribute('aria-pressed', String(key === current));
       chip.addEventListener('click', () => key !== current && onPick(key));
       return chip;
@@ -429,6 +506,7 @@ function renderChips() {
   };
   build($('#photoChips'), PHOTO_STYLES, state.photoStyle, setPhotoStyle);
   build($('#musicChips'), MUSIC_STYLES, state.musicStyle, setMusicStyle);
+  build($('#langChips'), LANGUAGES, lang, setLang);
 }
 
 function renderPlaylist() {
@@ -455,7 +533,7 @@ function renderPlaylist() {
   if (!state.tracks.length) {
     const li = document.createElement('li');
     li.className = 'empty';
-    li.textContent = 'carregando músicas…';
+    li.textContent = t('loadingTracks');
     list.append(li);
   }
 }
@@ -470,12 +548,43 @@ function setPanel(open) {
   wake();
 }
 
+// ---------- textos na tela ----------
+
+// Botões guardam a chave do texto em data-i18n-label; o title ganha o atalho do teclado
+function setButtonLabel(el, key) {
+  el.dataset.i18nLabel = key;
+  const text = t(key);
+  el.setAttribute('aria-label', text);
+  if (el.dataset.key) el.title = `${text} (${t(el.dataset.key)})`;
+}
+
+function setHint(key) {
+  const hint = $('#startBtn .hint');
+  hint.dataset.i18n = key;
+  hint.textContent = t(key);
+}
+
+function applyI18n() {
+  document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en';
+  document.querySelectorAll('[data-i18n]').forEach((el) => (el.textContent = t(el.dataset.i18n)));
+  document.querySelectorAll('[data-i18n-label]').forEach((el) => setButtonLabel(el, el.dataset.i18nLabel));
+  renderChips();
+  renderPlaylist();
+  renderPhotoCredit();
+}
+
+function setLang(next) {
+  lang = next;
+  storage('armony:lang', next);
+  applyI18n();
+}
+
 // ---------- controles ----------
 
 function setPaused(paused) {
   state.paused = paused;
   body.classList.toggle('paused', paused);
-  $('#playBtn').setAttribute('aria-label', paused ? 'Tocar' : 'Pausar');
+  setButtonLabel($('#playBtn'), paused ? 'play' : 'pause');
   slides.forEach((s) => s.querySelector('img')?.getAnimations().forEach((a) => (paused ? a.pause() : a.play())));
   if (paused) audio.pause();
   else if (audio.src && !playingSilence()) audio.play().catch(() => {});
@@ -485,7 +594,7 @@ function setPaused(paused) {
 function setMuted(muted) {
   audio.muted = muted;
   body.classList.toggle('muted', muted);
-  $('#muteBtn').setAttribute('aria-label', muted ? 'Desmutar' : 'Mutar');
+  setButtonLabel($('#muteBtn'), muted ? 'unmute' : 'mute');
   storage('armony:muted', muted ? '1' : '0');
 }
 
@@ -506,7 +615,7 @@ if (!(docEl.requestFullscreen || docEl.webkitRequestFullscreen)) body.classList.
   document.addEventListener(evt, () => {
     const fs = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
     body.classList.toggle('fullscreen', fs);
-    $('#fsBtn').setAttribute('aria-label', fs ? 'Sair da tela cheia' : 'Tela cheia');
+    setButtonLabel($('#fsBtn'), fs ? 'exitFullscreen' : 'fullscreen');
   })
 );
 
@@ -556,12 +665,13 @@ document.addEventListener('visibilitychange', () => {
 
 // ---------- início ----------
 
+const savedLang = storage('armony:lang');
+lang = savedLang in I18N ? savedLang : detectLang();
 const savedPhoto = storage('armony:photoStyle');
 const savedMusic = storage('armony:musicStyle');
 if (savedPhoto in PHOTO_STYLES) state.photoStyle = savedPhoto;
 if (savedMusic in MUSIC_STYLES) state.musicStyle = savedMusic;
-renderChips();
-renderPlaylist();
+applyI18n();
 
 // já começa a baixar enquanto a tela inicial está aberta
 const photosLoading = loadPhotoStyle(state.photoStyle);
@@ -570,7 +680,7 @@ setMusicStyle(state.musicStyle);
 $('#startBtn').addEventListener('click', async () => {
   if (state.started) return;
   state.started = true;
-  $('#startBtn .hint').textContent = 'carregando…';
+  setHint('loading');
   setMuted(storage('armony:muted') === '1');
   keepAwake();
 
@@ -584,7 +694,7 @@ $('#startBtn').addEventListener('click', async () => {
 
   state.photos = await photosLoading;
   if (!state.photos.length) {
-    $('#startBtn .hint').textContent = 'não foi possível carregar as fotos';
+    setHint('photoError');
     return;
   }
   state.photoIndex = -1;
