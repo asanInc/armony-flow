@@ -1,13 +1,13 @@
 'use strict';
 
 const CONFIG = {
-  slideMs: 25000,          // tempo de cada foto na tela
-  fadeMs: 3000,            // precisa bater com a transição de .slide no CSS
-  idleMs: 3000,            // esconde os controles após esse tempo parado
+  slideMs: 25000,          // how long each photo stays on screen
+  fadeMs: 3000,            // must match the .slide transition in style.css
+  idleMs: 3000,            // hide the controls after this long without input
   volume: 0.7,
 };
 
-// ---------- idiomas ----------
+// ---------- languages ----------
 
 const I18N = {
   pt: {
@@ -60,8 +60,8 @@ const I18N = {
 
 const LANGUAGES = { pt: { label: 'Português' }, en: { label: 'English' } };
 
-// Fusos horários de países lusófonos: pega quem mora no Brasil/Portugal/etc. mesmo com
-// o navegador em inglês
+// Time zones of Portuguese-speaking countries: catches people in Brazil, Portugal, etc.
+// even when their browser is set to English
 const PT_TIMEZONES = /^(America\/(Sao_Paulo|Fortaleza|Recife|Bahia|Belem|Maceio|Araguaina|Manaus|Cuiaba|Campo_Grande|Porto_Velho|Boa_Vista|Rio_Branco|Eirunepe|Santarem|Noronha)|Europe\/Lisbon|Atlantic\/(Madeira|Azores|Cape_Verde)|Africa\/(Luanda|Maputo|Bissau|Sao_Tome)|Asia\/(Dili|Macau))$/;
 
 function detectLang() {
@@ -69,7 +69,7 @@ function detectLang() {
   if (langs.some((l) => /^pt\b/i.test(l))) return 'pt';
   try {
     if (PT_TIMEZONES.test(Intl.DateTimeFormat().resolvedOptions().timeZone)) return 'pt';
-  } catch { /* sem Intl */ }
+  } catch { /* no Intl support */ }
   return 'en';
 }
 
@@ -77,18 +77,18 @@ let lang = 'en';
 const t = (key) => I18N[lang][key] ?? key;
 const label = (item) => item.label[lang] ?? item.label;
 
-// Categorias "Featured pictures of …" do Wikimedia Commons
+// Wikimedia Commons "Featured pictures of …" categories
 const PHOTO_STYLES = {
-  paisagens: { label: { pt: 'Paisagens', en: 'Landscapes' }, categories: ['landscapes'] },
-  montanhas: { label: { pt: 'Montanhas', en: 'Mountains' }, categories: ['mountains', 'volcanoes'] },
-  agua: { label: { pt: 'Água', en: 'Water' }, categories: ['coasts', 'beaches', 'lakes', 'waterfalls', 'bodies_of_water', 'islands'] },
-  florestas: { label: { pt: 'Florestas', en: 'Forests' }, categories: ['forests', 'parks', 'gardens'] },
-  campo: { label: { pt: 'Campo', en: 'Countryside' }, categories: ['agriculture'] },
-  cidades: { label: { pt: 'Cidades', en: 'Cities' }, categories: ['cityscapes'] },
-  tudo: { label: { pt: 'Tudo', en: 'Everything' }, categories: ['landscapes', 'mountains', 'coasts', 'beaches', 'lakes', 'waterfalls', 'forests', 'agriculture', 'cityscapes'] },
+  landscapes: { label: { pt: 'Paisagens', en: 'Landscapes' }, categories: ['landscapes'] },
+  mountains: { label: { pt: 'Montanhas', en: 'Mountains' }, categories: ['mountains', 'volcanoes'] },
+  water: { label: { pt: 'Água', en: 'Water' }, categories: ['coasts', 'beaches', 'lakes', 'waterfalls', 'bodies_of_water', 'islands'] },
+  forests: { label: { pt: 'Florestas', en: 'Forests' }, categories: ['forests', 'parks', 'gardens'] },
+  countryside: { label: { pt: 'Campo', en: 'Countryside' }, categories: ['agriculture'] },
+  cities: { label: { pt: 'Cidades', en: 'Cities' }, categories: ['cityscapes'] },
+  everything: { label: { pt: 'Tudo', en: 'Everything' }, categories: ['landscapes', 'mountains', 'coasts', 'beaches', 'lakes', 'waterfalls', 'forests', 'agriculture', 'cityscapes'] },
 };
 
-// Itens do Internet Archive com licença Creative Commons ou domínio público
+// Internet Archive items licensed under Creative Commons or in the public domain
 const MUSIC_STYLES = {
   lofi: {
     label: 'Lofi',
@@ -117,24 +117,24 @@ const MUSIC_STYLES = {
       'MLD_019_Abigail_Press_Drifting_Dawn',     // Abigail Press — CC BY-NC-ND 3.0
     ],
   },
-  classica: {
+  classical: {
     label: { pt: 'Clássica', en: 'Classical' },
     items: [
-      'musopen-chopin',  // Musopen — Chopin completo — CC0
-      'Musopen-Libre',   // Musopen — sinfonias — CC BY-SA 3.0
+      'musopen-chopin',  // Musopen — Chopin's complete works — CC0
+      'Musopen-Libre',   // Musopen — symphonies — CC BY-SA 3.0
     ],
   },
-  natureza: {
+  nature: {
     label: { pt: 'Natureza', en: 'Nature' },
     items: [
-      'relaxingrainsounds',          // chuva — CC0
-      'ocean-sea-sounds',            // oceano — CC0
-      'naturesounds-soundtheraphy',  // pássaros, água — CC0
+      'relaxingrainsounds',          // rain — CC0
+      'ocean-sea-sounds',            // ocean — CC0
+      'naturesounds-soundtheraphy',  // birds, water — CC0
     ],
   },
 };
 
-// WAV vazio: tocado dentro do clique inicial para o Safari liberar o áudio
+// Empty WAV, played inside the start tap so Safari unlocks audio playback
 const SILENCE = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
 
 const $ = (sel) => document.querySelector(sel);
@@ -145,14 +145,14 @@ const slides = [$('#slideA'), $('#slideB')];
 const state = {
   started: false,
   paused: false,
-  photoStyle: 'paisagens',
+  photoStyle: 'landscapes',
   photos: [],
   photoIndex: -1,
   currentPhoto: null,
-  front: 0,         // índice do slide visível
+  front: 0,          // index of the visible slide
   elapsed: 0,
   lastTick: 0,
-  nextReady: null,   // Promise da próxima foto pré-carregada
+  nextReady: null,   // Promise for the preloaded next photo
   transitioning: false,
   musicStyle: 'lofi',
   tracks: [],
@@ -160,7 +160,7 @@ const state = {
   wakeLock: null,
 };
 
-// ---------- utilidades ----------
+// ---------- utilities ----------
 
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
@@ -182,7 +182,7 @@ function storage(key, value) {
   try {
     if (value === undefined) return localStorage.getItem(key);
     localStorage.setItem(key, value);
-  } catch { /* storage indisponível */ }
+  } catch { /* storage unavailable */ }
   return null;
 }
 
@@ -195,10 +195,10 @@ function creditLink(text, href) {
   return link;
 }
 
-// ---------- fotos (Wikimedia Commons) ----------
+// ---------- photos (Wikimedia Commons) ----------
 
-// O Wikimedia só serve tamanhos fixos (1920, 3840…). Telas acima de 1920px físicos,
-// como a do iPad, recebem 3840 para ficarem nítidas mesmo com o zoom.
+// Wikimedia only serves fixed thumbnail sizes (1920, 3840…). Screens wider than 1920
+// physical pixels, like the iPad's, get 3840 so photos stay sharp while zoomed.
 function photoWidth() {
   const longSide = Math.max(screen.width, screen.height) * (window.devicePixelRatio || 1);
   return longSide > 1920 ? 3840 : 1920;
@@ -225,7 +225,7 @@ async function fetchPhotoPage(category, cont) {
     const info = p.imageinfo?.[0];
     if (!info?.thumburl) continue;
     const ratio = info.width / info.height;
-    // só horizontais de verdade, sem panoramas extremos, em alta resolução
+    // true landscape orientation, no extreme panoramas, high resolution only
     if (ratio < 1.3 || ratio > 2.2 || info.width < 3000) continue;
     photos.push({
       url: info.thumburl,
@@ -238,8 +238,8 @@ async function fetchPhotoPage(category, cont) {
   return { photos, cont: data.continue };
 }
 
-// Cada estilo tem uma lista que cresce enquanto as categorias chegam. A Promise resolve
-// assim que a primeira página chega; o resto é embaralhado à frente da foto atual.
+// Each style has a list that grows as its categories load. The Promise resolves as soon
+// as the first page arrives; the rest is shuffled in ahead of the current photo.
 const photoLists = new Map();
 
 function loadPhotoStyle(style) {
@@ -277,8 +277,8 @@ function loadPhotoStyle(style) {
   return ready;
 }
 
-// Devolve o próprio <img> já decodificado: é ele que entra na tela, então a
-// transição não precisa decodificar o JPEG no meio da animação.
+// Returns the decoded <img> itself: that exact element goes on screen, so the
+// browser never has to decode a JPEG in the middle of a crossfade.
 async function preload(photo) {
   const img = new Image();
   img.decoding = 'async';
@@ -288,14 +288,14 @@ async function preload(photo) {
   return { photo, img };
 }
 
-// Tenta até achar uma foto que carregue
+// Keep trying until a photo loads
 async function preloadNext() {
   const photos = state.photos;
   for (let tries = 0; tries < 5 && photos.length; tries++) {
     state.photoIndex = (state.photoIndex + 1) % photos.length;
     try {
       return await preload(photos[state.photoIndex]);
-    } catch { /* pula a foto quebrada */ }
+    } catch { /* skip the broken photo */ }
   }
   return null;
 }
@@ -306,12 +306,12 @@ function kenBurns(img) {
   const small = rand(1.02, 1.06);
   const big = rand(1.14, 1.22);
   const dx = rand(-3, 3), dy = rand(-2.5, 2.5);
-  // rotate(0.01deg) é invisível, mas impede o Firefox de arredondar a camada para pixels
-  // inteiros; sem isso um movimento tão lento anda "aos pulos" de 1px.
+  // rotate(0.01deg) is invisible, but it stops Firefox from snapping the layer to whole
+  // pixels; without it, motion this slow moves in visible 1px jumps.
   const from = `translate3d(${zoomIn ? 0 : dx}%, ${zoomIn ? 0 : dy}%, 0) scale(${zoomIn ? small : big}) rotate(0.01deg)`;
   const to = `translate3d(${zoomIn ? dx : 0}%, ${zoomIn ? dy : 0}%, 0) scale(${zoomIn ? big : small}) rotate(0.01deg)`;
   const anim = img.animate([{ transform: from }, { transform: to }], {
-    // folga extra: se a próxima foto demorar a baixar, a imagem continua se movendo em vez de parar
+    // extra slack: if the next photo is slow to download, keep moving instead of freezing
     duration: CONFIG.slideMs + CONFIG.fadeMs * 2 + 20000,
     easing: 'linear',
     fill: 'forwards',
@@ -327,7 +327,7 @@ function showPhoto({ photo, img }) {
   kenBurns(img);
   const outgoing = slides[state.front];
   state.front = nextIdx;
-  // espera um frame com a imagem já pintada antes de iniciar o fade
+  // wait one frame so the image is painted before the fade starts
   requestAnimationFrame(() => {
     incoming.classList.add('visible');
     outgoing.classList.remove('visible');
@@ -350,7 +350,7 @@ async function advance() {
   const pending = state.nextReady;
   const next = await pending;
   state.transitioning = false;
-  // o estilo mudou enquanto esperava: descarta, o tick tenta de novo com a lista nova
+  // the style changed while waiting: drop this one, the next tick retries with the new list
   if (pending !== state.nextReady) return;
   if (next) showPhoto(next);
   state.elapsed = 0;
@@ -358,7 +358,7 @@ async function advance() {
 }
 
 function tick(now) {
-  // limita o salto quando a aba volta do segundo plano
+  // cap the jump when the tab comes back from the background
   if (!state.paused && state.lastTick) state.elapsed += Math.min(now - state.lastTick, 100);
   state.lastTick = now;
   if (state.elapsed >= CONFIG.slideMs) advance();
@@ -374,11 +374,11 @@ async function setPhotoStyle(style) {
   state.photos = list;
   state.photoIndex = -1;
   state.nextReady = preloadNext();
-  // força a troca no próximo frame, com o crossfade de sempre
+  // force a switch on the next frame, with the usual crossfade
   if (state.started) state.elapsed = CONFIG.slideMs;
 }
 
-// ---------- música (Internet Archive) ----------
+// ---------- music (Internet Archive) ----------
 
 const trackLists = new Map();
 
@@ -438,7 +438,7 @@ function playTrack(index) {
   }
 }
 
-// Voltar: nos primeiros segundos vai para a faixa anterior; depois reinicia a atual
+// Back: within the first seconds go to the previous track, otherwise restart the current one
 function prevTrack() {
   if (audio.currentTime > 3) audio.currentTime = 0;
   else playTrack(state.trackIndex - 1);
@@ -457,7 +457,7 @@ function fadeInAudio() {
 
 const playingSilence = () => audio.src.startsWith('data:');
 
-// 'ended' e 'error' podem chegar juntos: o token garante que só um deles avança a faixa
+// 'ended' and 'error' can fire together: the token makes sure only one of them skips ahead
 audio.addEventListener('ended', () => !playingSilence() && nextTrack());
 audio.addEventListener('error', () => {
   if (!audio.error || playingSilence()) return;
@@ -466,7 +466,7 @@ audio.addEventListener('error', () => {
   skipTimer = setTimeout(() => token === trackToken && nextTrack(), 1000);
 });
 
-// Só uma instância toca por vez: abrir o quadro em outra aba/janela pausa as demais
+// Only one instance plays at a time: opening the app in another tab or window pauses the rest
 const instanceId = Math.random().toString(36).slice(2);
 const channel = 'BroadcastChannel' in window ? new BroadcastChannel('armony-flow') : null;
 audio.addEventListener('play', () => !playingSilence() && channel?.postMessage({ playing: instanceId }));
@@ -477,7 +477,7 @@ if (channel) {
 }
 window.addEventListener('pagehide', () => audio.pause());
 
-// Teclas de mídia, fones Bluetooth e a tela de bloqueio do iPad
+// Media keys, Bluetooth headphones and the iPad lock screen
 if ('mediaSession' in navigator) {
   const handlers = {
     play: () => setPaused(false),
@@ -486,11 +486,11 @@ if ('mediaSession' in navigator) {
     nexttrack: nextTrack,
   };
   for (const [action, fn] of Object.entries(handlers)) {
-    try { navigator.mediaSession.setActionHandler(action, fn); } catch { /* ação não suportada */ }
+    try { navigator.mediaSession.setActionHandler(action, fn); } catch { /* action not supported */ }
   }
 }
 
-// ---------- painel de playlist ----------
+// ---------- playlist panel ----------
 
 function renderChips() {
   const build = (container, styles, current, onPick) => {
@@ -548,9 +548,9 @@ function setPanel(open) {
   wake();
 }
 
-// ---------- textos na tela ----------
+// ---------- on-screen text ----------
 
-// Botões guardam a chave do texto em data-i18n-label; o title ganha o atalho do teclado
+// Buttons keep their text key in data-i18n-label; the title also shows the keyboard shortcut
 function setButtonLabel(el, key) {
   el.dataset.i18nLabel = key;
   const text = t(key);
@@ -579,7 +579,7 @@ function setLang(next) {
   applyI18n();
 }
 
-// ---------- controles ----------
+// ---------- controls ----------
 
 function setPaused(paused) {
   state.paused = paused;
@@ -607,7 +607,7 @@ function toggleFullscreen() {
   }
 }
 
-// iPhone e o modo "Tela de Início" não têm API de tela cheia (e nem precisam)
+// iPhone and Home Screen mode have no Fullscreen API (and don't need one)
 const docEl = document.documentElement;
 if (!(docEl.requestFullscreen || docEl.webkitRequestFullscreen)) body.classList.add('no-fullscreen');
 
@@ -627,7 +627,7 @@ $('#listBtn').addEventListener('click', () => setPanel(!panelOpen()));
 $('#closePanel').addEventListener('click', () => setPanel(false));
 $('#fsBtn').addEventListener('click', toggleFullscreen);
 
-// Clicar fora do painel fecha
+// Clicking outside the panel closes it
 document.addEventListener('pointerdown', (e) => {
   if (panelOpen() && !panel.contains(e.target) && !$('#listBtn').contains(e.target)) setPanel(false);
 });
@@ -644,7 +644,7 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'b' || e.key === 'B') prevTrack();
 });
 
-// Esconde controles e cursor quando o mouse fica parado (menos com o painel aberto)
+// Hide the controls and cursor when the mouse is still (unless the panel is open)
 let idleTimer;
 function wake() {
   body.classList.remove('idle');
@@ -655,15 +655,15 @@ function wake() {
   document.addEventListener(evt, wake, { passive: true })
 );
 
-// Mantém a tela ligada (é um quadro, afinal)
+// Keep the screen awake (it's a picture frame, after all)
 async function keepAwake() {
-  try { state.wakeLock = await navigator.wakeLock?.request('screen'); } catch { /* sem suporte */ }
+  try { state.wakeLock = await navigator.wakeLock?.request('screen'); } catch { /* not supported */ }
 }
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && state.started) keepAwake();
 });
 
-// ---------- início ----------
+// ---------- startup ----------
 
 const savedLang = storage('armony:lang');
 lang = savedLang in I18N ? savedLang : detectLang();
@@ -673,7 +673,7 @@ if (savedPhoto in PHOTO_STYLES) state.photoStyle = savedPhoto;
 if (savedMusic in MUSIC_STYLES) state.musicStyle = savedMusic;
 applyI18n();
 
-// já começa a baixar enquanto a tela inicial está aberta
+// start downloading while the start screen is still showing
 const photosLoading = loadPhotoStyle(state.photoStyle);
 setMusicStyle(state.musicStyle);
 
@@ -684,8 +684,8 @@ $('#startBtn').addEventListener('click', async () => {
   setMuted(storage('armony:muted') === '1');
   keepAwake();
 
-  // Toca algo ainda dentro do clique para o navegador liberar o autoplay (Safari/iOS).
-  // Se as músicas ainda não chegaram, setMusicStyle começa a tocar quando chegarem.
+  // Play something inside the tap itself so the browser allows autoplay (Safari/iOS).
+  // If the tracks haven't arrived yet, setMusicStyle starts playback when they do.
   if (state.tracks.length) playTrack(0);
   else {
     audio.src = SILENCE;

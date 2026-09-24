@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <!-- viewport-fit=cover: sem isso o iPad deixa faixas pretas nas áreas seguras laterais -->
+  <!-- viewport-fit=cover: without it the iPad leaves black bars over the side safe areas -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#000000" />
-  <!-- "Adicionar à Tela de Início" no iPad/iPhone abre sem nenhuma barra do Safari -->
+  <!-- "Add to Home Screen" on iPad/iPhone opens with no Safari bars at all -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -23,7 +23,7 @@
   <div id="start">
     <button id="startBtn" type="button">
       <span class="title">Armony Flow</span>
-      <span class="hint" data-i18n="tapToStart">toque para começar</span>
+      <span class="hint" data-i18n="tapToStart">tap to begin</span>
     </button>
   </div>
 
@@ -63,21 +63,21 @@
 
   <aside id="panel" hidden data-i18n-label="panel">
     <header>
-      <span data-i18n="settings">Ajustes</span>
+      <span data-i18n="settings">Settings</span>
       <button id="closePanel" type="button" data-i18n-label="close">
         <svg viewBox="0 0 24 24"><path class="stroke" d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </header>
     <section>
-      <h3 data-i18n="photos">Fotos</h3>
+      <h3 data-i18n="photos">Photos</h3>
       <div class="chips" id="photoChips"></div>
     </section>
     <section>
-      <h3 data-i18n="music">Música</h3>
+      <h3 data-i18n="music">Music</h3>
       <div class="chips" id="musicChips"></div>
     </section>
     <section>
-      <h3 data-i18n="language">Idioma</h3>
+      <h3 data-i18n="language">Language</h3>
       <div class="chips" id="langChips"></div>
     </section>
     <section class="playlist">
