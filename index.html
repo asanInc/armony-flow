@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Armony Flow</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="stage">
+    <div class="slide" id="slideA"><img alt="" /></div>
+    <div class="slide" id="slideB"><img alt="" /></div>
+    <div class="vignette"></div>
+  </div>
+
+  <div id="start">
+    <button id="startBtn" type="button">
+      <span class="title">Armony Flow</span>
+      <span class="hint">toque para começar</span>
+    </button>
+  </div>
+
+  <div id="ui">
+    <div id="credits">
+      <div id="photoCredit"></div>
+      <div id="trackCredit"></div>
+    </div>
+    <div id="controls">
+      <button id="playBtn" type="button" aria-label="Pausar" title="Play / Pause (espaço)">
+        <svg class="i-pause" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+        <svg class="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>
+      </button>
+      <button id="muteBtn" type="button" aria-label="Mutar" title="Mutar (M)">
+        <svg class="i-sound" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path class="stroke" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/></svg>
+        <svg class="i-muted" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path class="stroke" d="M16.5 9.5l5 5M21.5 9.5l-5 5"/></svg>
+      </button>
+      <button id="fsBtn" type="button" aria-label="Tela cheia" title="Tela cheia (F)">
+        <svg class="i-expand" viewBox="0 0 24 24"><path class="stroke" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+        <svg class="i-shrink" viewBox="0 0 24 24"><path class="stroke" d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <audio id="audio" preload="auto"></audio>
+  <script src="app.js"></script>
+</body>
+</html>
