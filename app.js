@@ -63,8 +63,16 @@ function storage(key, value) {
 
 // ---------- fotos (Wikimedia Commons) ----------
 
+// O Wikimedia só serve tamanhos fixos: pedir 2560 devolve o arquivo de 3840px (~3 MB,
+// ~40 MB decodificado), o que trava a animação no iPad. 1920 é leve e nítido o bastante;
+// 3840 só em monitor 4K de desktop.
+function photoWidth() {
+  const longSide = Math.max(screen.width, screen.height) * (window.devicePixelRatio || 1);
+  return navigator.maxTouchPoints === 0 && longSide > 3000 ? 3840 : 1920;
+}
+
 async function loadPhotos() {
-  const width = window.screen.width * (window.devicePixelRatio || 1) > 2560 ? 3840 : 2560;
+  const width = photoWidth();
   const base = 'https://commons.wikimedia.org/w/api.php?' + new URLSearchParams({
     action: 'query',
     generator: 'categorymembers',
@@ -111,13 +119,15 @@ async function loadPhotos() {
   })().catch(() => { /* segue com o que já tem */ });
 }
 
-function preload(photo) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => (img.decode ? img.decode().catch(() => {}) : Promise.resolve()).then(() => resolve(photo));
-    img.onerror = reject;
-    img.src = photo.url;
-  });
+// Devolve o próprio <img> já decodificado: é ele que entra na tela, então a
+// transição não precisa decodificar 1 MB de JPEG no meio da animação.
+async function preload(photo) {
+  const img = new Image();
+  img.decoding = 'async';
+  img.alt = '';
+  img.src = photo.url;
+  await img.decode();
+  return { photo, img };
 }
 
 // Tenta até achar uma foto que carregue
@@ -140,22 +150,27 @@ function kenBurns(img) {
   const from = `scale(${zoomIn ? small : big}) translate(${zoomIn ? 0 : dx}%, ${zoomIn ? 0 : dy}%)`;
   const to = `scale(${zoomIn ? big : small}) translate(${zoomIn ? dx : 0}%, ${zoomIn ? dy : 0}%)`;
   const anim = img.animate([{ transform: from }, { transform: to }], {
-    duration: CONFIG.slideMs + CONFIG.fadeMs * 2,
+    // folga extra: se a próxima foto demorar a baixar, a imagem continua se movendo em vez de parar
+    duration: CONFIG.slideMs + CONFIG.fadeMs * 2 + 20000,
     easing: 'linear',
     fill: 'forwards',
   });
   if (state.paused) anim.pause();
 }
 
-function showPhoto(photo) {
+function showPhoto({ photo, img }) {
   const nextIdx = 1 - state.front;
   const incoming = slides[nextIdx];
-  const img = incoming.querySelector('img');
-  img.src = photo.url;
+  incoming.querySelector('img').getAnimations().forEach((a) => a.cancel());
+  incoming.replaceChildren(img);
   kenBurns(img);
-  incoming.classList.add('visible');
-  slides[state.front].classList.remove('visible');
+  const outgoing = slides[state.front];
   state.front = nextIdx;
+  // espera um frame com a imagem já pintada antes de iniciar o fade
+  requestAnimationFrame(() => {
+    incoming.classList.add('visible');
+    outgoing.classList.remove('visible');
+  });
 
   const credit = $('#photoCredit');
   credit.textContent = '';
@@ -170,15 +185,16 @@ function showPhoto(photo) {
 async function advance() {
   if (state.transitioning) return;
   state.transitioning = true;
-  const photo = await state.nextReady;
-  if (photo) showPhoto(photo);
+  const next = await state.nextReady;
+  if (next) showPhoto(next);
   state.elapsed = 0;
   state.nextReady = preloadNext();
   state.transitioning = false;
 }
 
 function tick(now) {
-  if (!state.paused && state.lastTick) state.elapsed += now - state.lastTick;
+  // limita o salto quando a aba volta do segundo plano
+  if (!state.paused && state.lastTick) state.elapsed += Math.min(now - state.lastTick, 100);
   state.lastTick = now;
   if (state.elapsed >= CONFIG.slideMs) advance();
   requestAnimationFrame(tick);
@@ -202,13 +218,20 @@ async function loadTracks() {
   state.tracks = shuffle(results.flatMap((r) => (r.status === 'fulfilled' ? r.value : [])));
 }
 
+let trackToken = 0;
+let skipTimer;
+
 function playTrack(index) {
   if (!state.tracks.length) return;
+  const token = ++trackToken;
+  clearTimeout(skipTimer);
   state.trackIndex = (index + state.tracks.length) % state.tracks.length;
   const track = state.tracks[state.trackIndex];
   audio.src = track.url;
   audio.volume = 0;
-  if (!state.paused) audio.play().then(fadeInAudio).catch(() => {});
+  if (!state.paused) {
+    audio.play().then(() => token === trackToken && fadeInAudio()).catch(() => {});
+  }
 
   const credit = $('#trackCredit');
   credit.textContent = '';
@@ -230,8 +253,25 @@ function fadeInAudio() {
   requestAnimationFrame(step);
 }
 
+// 'ended' e 'error' podem chegar juntos: o token garante que só um deles avança a faixa
 audio.addEventListener('ended', () => playTrack(state.trackIndex + 1));
-audio.addEventListener('error', () => setTimeout(() => playTrack(state.trackIndex + 1), 1000));
+audio.addEventListener('error', () => {
+  if (!audio.error) return;
+  const token = trackToken;
+  clearTimeout(skipTimer);
+  skipTimer = setTimeout(() => token === trackToken && playTrack(state.trackIndex + 1), 1000);
+});
+
+// Só uma instância toca por vez: abrir o quadro em outra aba/janela pausa as demais
+const instanceId = Math.random().toString(36).slice(2);
+const channel = 'BroadcastChannel' in window ? new BroadcastChannel('armony-flow') : null;
+audio.addEventListener('play', () => channel?.postMessage({ playing: instanceId }));
+if (channel) {
+  channel.onmessage = (e) => {
+    if (e.data?.playing && e.data.playing !== instanceId && !state.paused) setPaused(true);
+  };
+}
+window.addEventListener('pagehide', () => audio.pause());
 
 // ---------- controles ----------
 
@@ -239,7 +279,7 @@ function setPaused(paused) {
   state.paused = paused;
   body.classList.toggle('paused', paused);
   $('#playBtn').setAttribute('aria-label', paused ? 'Tocar' : 'Pausar');
-  slides.forEach((s) => s.querySelector('img').getAnimations().forEach((a) => (paused ? a.pause() : a.play())));
+  slides.forEach((s) => s.querySelector('img')?.getAnimations().forEach((a) => (paused ? a.pause() : a.play())));
   if (paused) audio.pause();
   else if (audio.src) audio.play().catch(() => {});
 }
@@ -259,6 +299,10 @@ function toggleFullscreen() {
     (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
   }
 }
+
+// iPhone e o modo "Tela de Início" não têm API de tela cheia (e nem precisam)
+const docEl = document.documentElement;
+if (!(docEl.requestFullscreen || docEl.webkitRequestFullscreen)) body.classList.add('no-fullscreen');
 
 ['fullscreenchange', 'webkitfullscreenchange'].forEach((evt) =>
   document.addEventListener(evt, () => {

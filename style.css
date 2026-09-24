@@ -18,19 +18,32 @@ body.idle, body.idle * { cursor: none !important; }
 .slide {
   position: absolute;
   inset: 0;
+  overflow: hidden;
   opacity: 0;
   transition: opacity 3s ease-in-out;
   will-change: opacity;
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 .slide.visible { opacity: 1; }
 
 .slide img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
   transform-origin: center;
   will-change: transform;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
+
+/* iPad/Safari: garante que o documento em tela cheia ocupe tudo, sem faixas */
+:fullscreen { width: 100%; height: 100%; background: #000; }
+:-webkit-full-screen { width: 100%; height: 100%; background: #000; }
+.no-fullscreen #fsBtn { display: none; }
+::backdrop { background: #000; }
 
 .vignette {
   position: absolute;
@@ -84,12 +97,14 @@ body.idle, body.idle * { cursor: none !important; }
   justify-content: space-between;
   align-items: flex-end;
   gap: 16px;
-  padding: 24px 28px;
+  padding: 24px max(28px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(28px, env(safe-area-inset-left));
   background: linear-gradient(to top, rgba(0, 0, 0, 0.45), transparent);
-  transition: opacity 0.8s ease;
+  transition: opacity 0.8s ease, visibility 0s linear 0s;
   z-index: 5;
 }
-body.idle #ui { opacity: 0; }
+/* visibility: hidden tira os controles da composição; com só opacity 0 o navegador
+   continua recalculando a camada em cima da foto animada a cada frame */
+body.idle #ui { opacity: 0; visibility: hidden; transition: opacity 0.8s ease, visibility 0s linear 0.8s; }
 
 #credits {
   font-size: 12px;
@@ -108,16 +123,15 @@ body.idle #ui { opacity: 0; }
   height: 46px;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.1);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  /* sem backdrop-filter: blur sobre uma imagem animada re-renderiza a cada frame e trava no iPad */
+  background: rgba(0, 0, 0, 0.35);
   color: #fff;
   cursor: pointer;
   display: grid;
   place-items: center;
   transition: background 0.2s ease, transform 0.2s ease;
 }
-#controls button:hover { background: rgba(255, 255, 255, 0.22); transform: scale(1.06); }
+#controls button:hover { background: rgba(0, 0, 0, 0.55); transform: scale(1.06); }
 #controls button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
 #controls svg { width: 20px; height: 20px; fill: currentColor; }

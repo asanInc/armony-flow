@@ -2,7 +2,14 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- viewport-fit=cover: sem isso o iPad deixa faixas pretas nas áreas seguras laterais -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#000000" />
+  <!-- "Adicionar à Tela de Início" no iPad/iPhone abre sem nenhuma barra do Safari -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Armony Flow" />
   <title>Armony Flow</title>
   <link rel="stylesheet" href="style.css" />
 </head>
