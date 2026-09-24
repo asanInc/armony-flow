@@ -147,8 +147,10 @@ function kenBurns(img) {
   const small = rand(1.02, 1.06);
   const big = rand(1.14, 1.22);
   const dx = rand(-3, 3), dy = rand(-2.5, 2.5);
-  const from = `scale(${zoomIn ? small : big}) translate(${zoomIn ? 0 : dx}%, ${zoomIn ? 0 : dy}%)`;
-  const to = `scale(${zoomIn ? big : small}) translate(${zoomIn ? dx : 0}%, ${zoomIn ? dy : 0}%)`;
+  // rotate(0.01deg) é invisível, mas impede o Firefox de arredondar a camada para pixels
+  // inteiros; sem isso um movimento tão lento anda "aos pulos" de 1px.
+  const from = `translate3d(${zoomIn ? 0 : dx}%, ${zoomIn ? 0 : dy}%, 0) scale(${zoomIn ? small : big}) rotate(0.01deg)`;
+  const to = `translate3d(${zoomIn ? dx : 0}%, ${zoomIn ? dy : 0}%, 0) scale(${zoomIn ? big : small}) rotate(0.01deg)`;
   const anim = img.animate([{ transform: from }, { transform: to }], {
     // folga extra: se a próxima foto demorar a baixar, a imagem continua se movendo em vez de parar
     duration: CONFIG.slideMs + CONFIG.fadeMs * 2 + 20000,
