@@ -1,19 +1,71 @@
 'use strict';
 
 const CONFIG = {
-  slideMs: 25000,          // tempo de cada paisagem na tela
+  slideMs: 25000,          // tempo de cada foto na tela
   fadeMs: 3000,            // precisa bater com a transição de .slide no CSS
   idleMs: 3000,            // esconde os controles após esse tempo parado
   volume: 0.7,
-  photoCategory: 'Category:Featured_pictures_of_landscapes',
-  // Itens do Internet Archive com licença Creative Commons / domínio público
-  musicItems: [
-    'chillhop-raw-cuts',                       // Chillhop Music — CC BY-NC-ND 4.0
-    'loyalty-freak-music-lofi-ambient-songs',  // Loyalty Freak Music — CC0
-    'lofi-lion-tame-the-beast',                // CC BY 4.0
-    'cozy-alone-lofi-chill-out-beats',         // CC BY-NC 4.0
-  ],
 };
+
+// Categorias "Featured pictures of …" do Wikimedia Commons
+const PHOTO_STYLES = {
+  paisagens: { label: 'Paisagens', categories: ['landscapes'] },
+  montanhas: { label: 'Montanhas', categories: ['mountains', 'volcanoes'] },
+  agua: { label: 'Água', categories: ['coasts', 'beaches', 'lakes', 'waterfalls', 'bodies_of_water', 'islands'] },
+  florestas: { label: 'Florestas', categories: ['forests', 'parks', 'gardens'] },
+  campo: { label: 'Campo', categories: ['agriculture'] },
+  cidades: { label: 'Cidades', categories: ['cityscapes'] },
+  tudo: { label: 'Tudo', categories: ['landscapes', 'mountains', 'coasts', 'beaches', 'lakes', 'waterfalls', 'forests', 'agriculture', 'cityscapes'] },
+};
+
+// Itens do Internet Archive com licença Creative Commons ou domínio público
+const MUSIC_STYLES = {
+  lofi: {
+    label: 'Lofi',
+    items: [
+      'chillhop-raw-cuts',                       // Chillhop Music — CC BY-NC-ND 4.0
+      'loyalty-freak-music-lofi-ambient-songs',  // Loyalty Freak Music — CC0
+      'lofi-lion-tame-the-beast',                // CC BY 4.0
+      'cozy-alone-lofi-chill-out-beats',         // CC BY-NC 4.0
+    ],
+  },
+  jazz: {
+    label: 'Jazz',
+    items: [
+      'DWK123',  // ProleteR — Curses From Past Times — CC BY-NC-ND 3.0
+      'DWK127',  // Kova — Cookin' Session — CC BY-NC-ND 3.0
+      'DWK217',  // Boogie Belgique — Nightwalker Vol. 1 — CC BY-NC-ND 3.0
+    ],
+  },
+  piano: {
+    label: 'Piano',
+    items: [
+      'ca315_fp',                                // Fabrizio Paterlini — Viandanze — CC BY-NC-ND 3.0
+      'WM056',                                   // Lee Rosevere — Play 2 — CC BY-NC-SA 2.5
+      'Vkrsnl037CandlegravityAMomentForMyself',  // Candlegravity — CC BY-NC-ND 3.0
+      'pcr089EmilDavydov-Sketches',              // Emil Davydov — CC BY-ND 3.0
+      'MLD_019_Abigail_Press_Drifting_Dawn',     // Abigail Press — CC BY-NC-ND 3.0
+    ],
+  },
+  classica: {
+    label: 'Clássica',
+    items: [
+      'musopen-chopin',  // Musopen — Chopin completo — CC0
+      'Musopen-Libre',   // Musopen — sinfonias — CC BY-SA 3.0
+    ],
+  },
+  natureza: {
+    label: 'Natureza',
+    items: [
+      'relaxingrainsounds',          // chuva — CC0
+      'ocean-sea-sounds',            // oceano — CC0
+      'naturesounds-soundtheraphy',  // pássaros, água — CC0
+    ],
+  },
+};
+
+// WAV vazio: tocado dentro do clique inicial para o Safari liberar o áudio
+const SILENCE = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
 
 const $ = (sel) => document.querySelector(sel);
 const body = document.body;
@@ -23,13 +75,15 @@ const slides = [$('#slideA'), $('#slideB')];
 const state = {
   started: false,
   paused: false,
+  photoStyle: 'paisagens',
   photos: [],
-  photoIndex: 0,
+  photoIndex: -1,
   front: 0,          // índice do slide visível
   elapsed: 0,
   lastTick: 0,
   nextReady: null,   // Promise da próxima foto pré-carregada
   transitioning: false,
+  musicStyle: 'lofi',
   tracks: [],
   trackIndex: 0,
   wakeLock: null,
@@ -61,66 +115,99 @@ function storage(key, value) {
   return null;
 }
 
-// ---------- fotos (Wikimedia Commons) ----------
-
-// O Wikimedia só serve tamanhos fixos: pedir 2560 devolve o arquivo de 3840px (~3 MB,
-// ~40 MB decodificado), o que trava a animação no iPad. 1920 é leve e nítido o bastante;
-// 3840 só em monitor 4K de desktop.
-function photoWidth() {
-  const longSide = Math.max(screen.width, screen.height) * (window.devicePixelRatio || 1);
-  return navigator.maxTouchPoints === 0 && longSide > 3000 ? 3840 : 1920;
+function creditLink(text, href) {
+  const link = document.createElement('a');
+  link.href = href;
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.textContent = text;
+  return link;
 }
 
-async function loadPhotos() {
-  const width = photoWidth();
-  const base = 'https://commons.wikimedia.org/w/api.php?' + new URLSearchParams({
+// ---------- fotos (Wikimedia Commons) ----------
+
+// O Wikimedia só serve tamanhos fixos (1920, 3840…). Telas acima de 1920px físicos,
+// como a do iPad, recebem 3840 para ficarem nítidas mesmo com o zoom.
+function photoWidth() {
+  const longSide = Math.max(screen.width, screen.height) * (window.devicePixelRatio || 1);
+  return longSide > 1920 ? 3840 : 1920;
+}
+
+async function fetchPhotoPage(category, cont) {
+  const params = new URLSearchParams({
     action: 'query',
     generator: 'categorymembers',
-    gcmtitle: CONFIG.photoCategory,
+    gcmtitle: `Category:Featured_pictures_of_${category}`,
     gcmtype: 'file',
     gcmlimit: '500',
     prop: 'imageinfo',
     iiprop: 'url|size|extmetadata',
     iiextmetadatafilter: 'Artist|LicenseShortName',
-    iiurlwidth: String(width),
+    iiurlwidth: String(photoWidth()),
     format: 'json',
     origin: '*',
+    ...cont,
   });
+  const data = await (await fetch('https://commons.wikimedia.org/w/api.php?' + params)).json();
+  const photos = [];
+  for (const p of Object.values(data.query?.pages || {})) {
+    const info = p.imageinfo?.[0];
+    if (!info?.thumburl) continue;
+    const ratio = info.width / info.height;
+    // só horizontais de verdade, sem panoramas extremos, em alta resolução
+    if (ratio < 1.3 || ratio > 2.2 || info.width < 3000) continue;
+    photos.push({
+      url: info.thumburl,
+      page: info.descriptionurl,
+      title: p.title.replace(/^File:/, '').replace(/\.[a-z]+$/i, '').replace(/_/g, ' '),
+      artist: stripHtml(info.extmetadata?.Artist?.value) || 'Autor desconhecido',
+      license: info.extmetadata?.LicenseShortName?.value || '',
+    });
+  }
+  return { photos, cont: data.continue };
+}
 
-  const fetchPage = async (cont) => {
-    const data = await (await fetch(base + '&' + new URLSearchParams(cont || {}))).json();
-    const photos = [];
-    for (const p of Object.values(data.query?.pages || {})) {
-      const info = p.imageinfo?.[0];
-      if (!info?.thumburl) continue;
-      const ratio = info.width / info.height;
-      // só paisagem "de verdade": horizontal, sem panoramas extremos, alta resolução
-      if (ratio < 1.3 || ratio > 2.2 || info.width < 3000) continue;
-      photos.push({
-        url: info.thumburl,
-        page: info.descriptionurl,
-        title: p.title.replace(/^File:/, '').replace(/\.[a-z]+$/i, '').replace(/_/g, ' '),
-        artist: stripHtml(info.extmetadata?.Artist?.value) || 'Autor desconhecido',
-        license: info.extmetadata?.LicenseShortName?.value || '',
-      });
+// Cada estilo tem uma lista que cresce enquanto as categorias chegam. A Promise resolve
+// assim que a primeira página chega; o resto é embaralhado à frente da foto atual.
+const photoLists = new Map();
+
+function loadPhotoStyle(style) {
+  if (photoLists.has(style)) return photoLists.get(style).ready;
+  const list = [];
+  const seen = new Set();
+  let resolveReady;
+  const ready = new Promise((r) => (resolveReady = r));
+  photoLists.set(style, { list, ready });
+
+  const add = (photos) => {
+    for (const photo of photos) {
+      if (seen.has(photo.url)) continue;
+      seen.add(photo.url);
+      const min = list === state.photos ? state.photoIndex + 1 : 0;
+      list.splice(Math.floor(rand(min, list.length + 1)), 0, photo);
     }
-    return { photos: shuffle(photos), cont: data.continue };
   };
 
-  // A primeira página já basta para começar; o resto chega em segundo plano
-  let { photos, cont } = await fetchPage();
-  state.photos = photos;
   (async () => {
-    while (cont) {
-      const next = await fetchPage(cont);
-      state.photos.push(...next.photos);
-      cont = next.cont;
+    for (const category of shuffle([...PHOTO_STYLES[style].categories])) {
+      let cont = {};
+      do {
+        try {
+          const page = await fetchPhotoPage(category, cont);
+          add(page.photos);
+          cont = page.cont;
+        } catch { cont = null; }
+        if (list.length) resolveReady(list);
+      } while (cont);
     }
-  })().catch(() => { /* segue com o que já tem */ });
+    resolveReady(list);
+  })();
+
+  return ready;
 }
 
 // Devolve o próprio <img> já decodificado: é ele que entra na tela, então a
-// transição não precisa decodificar 1 MB de JPEG no meio da animação.
+// transição não precisa decodificar o JPEG no meio da animação.
 async function preload(photo) {
   const img = new Image();
   img.decoding = 'async';
@@ -132,10 +219,11 @@ async function preload(photo) {
 
 // Tenta até achar uma foto que carregue
 async function preloadNext() {
-  for (let tries = 0; tries < 5; tries++) {
-    state.photoIndex = (state.photoIndex + 1) % state.photos.length;
+  const photos = state.photos;
+  for (let tries = 0; tries < 5 && photos.length; tries++) {
+    state.photoIndex = (state.photoIndex + 1) % photos.length;
     try {
-      return await preload(state.photos[state.photoIndex]);
+      return await preload(photos[state.photoIndex]);
     } catch { /* pula a foto quebrada */ }
   }
   return null;
@@ -163,7 +251,7 @@ function kenBurns(img) {
 function showPhoto({ photo, img }) {
   const nextIdx = 1 - state.front;
   const incoming = slides[nextIdx];
-  incoming.querySelector('img').getAnimations().forEach((a) => a.cancel());
+  incoming.querySelector('img')?.getAnimations().forEach((a) => a.cancel());
   incoming.replaceChildren(img);
   kenBurns(img);
   const outgoing = slides[state.front];
@@ -175,23 +263,21 @@ function showPhoto({ photo, img }) {
   });
 
   const credit = $('#photoCredit');
-  credit.textContent = '';
-  const link = document.createElement('a');
-  link.href = photo.page;
-  link.target = '_blank';
-  link.rel = 'noopener';
-  link.textContent = photo.title;
-  credit.append('📷 ', link, ` — ${photo.artist}${photo.license ? ` (${photo.license})` : ''}`);
+  credit.replaceChildren('📷 ', creditLink(photo.title, photo.page),
+    ` — ${photo.artist}${photo.license ? ` (${photo.license})` : ''}`);
 }
 
 async function advance() {
-  if (state.transitioning) return;
+  if (state.transitioning || !state.nextReady) return;
   state.transitioning = true;
-  const next = await state.nextReady;
+  const pending = state.nextReady;
+  const next = await pending;
+  state.transitioning = false;
+  // o estilo mudou enquanto esperava: descarta, o tick tenta de novo com a lista nova
+  if (pending !== state.nextReady) return;
   if (next) showPhoto(next);
   state.elapsed = 0;
   state.nextReady = preloadNext();
-  state.transitioning = false;
 }
 
 function tick(now) {
@@ -202,22 +288,50 @@ function tick(now) {
   requestAnimationFrame(tick);
 }
 
+async function setPhotoStyle(style) {
+  state.photoStyle = style;
+  storage('armony:photoStyle', style);
+  renderChips();
+  const list = await loadPhotoStyle(style);
+  if (state.photoStyle !== style) return;
+  state.photos = list;
+  state.photoIndex = -1;
+  state.nextReady = preloadNext();
+  // força a troca no próximo frame, com o crossfade de sempre
+  if (state.started) state.elapsed = CONFIG.slideMs;
+}
+
 // ---------- música (Internet Archive) ----------
 
-async function loadTracks() {
-  const results = await Promise.allSettled(CONFIG.musicItems.map(async (id) => {
-    const data = await (await fetch(`https://archive.org/metadata/${id}`)).json();
-    const meta = data.metadata || {};
-    return (data.files || [])
-      .filter((f) => /\.mp3$/i.test(f.name) && (f.source === 'original' || /VBR/.test(f.format || '')))
-      .map((f) => ({
-        url: `https://archive.org/download/${id}/${encodeURIComponent(f.name)}`,
-        title: f.title || f.name.replace(/\.mp3$/i, ''),
-        artist: f.artist || f.creator || meta.creator || '',
-        page: `https://archive.org/details/${id}`,
-      }));
-  }));
-  state.tracks = shuffle(results.flatMap((r) => (r.status === 'fulfilled' ? r.value : [])));
+const trackLists = new Map();
+
+function loadMusicStyle(style) {
+  if (!trackLists.has(style)) {
+    trackLists.set(style, Promise.allSettled(MUSIC_STYLES[style].items.map(async (id) => {
+      const data = await (await fetch(`https://archive.org/metadata/${id}`)).json();
+      const meta = data.metadata || {};
+      return (data.files || [])
+        .filter((f) => /\.mp3$/i.test(f.name) && (f.source === 'original' || /VBR/.test(f.format || '')))
+        .map((f) => ({
+          url: `https://archive.org/download/${id}/${encodeURIComponent(f.name)}`,
+          title: f.title || f.name.replace(/\.mp3$/i, '').replace(/_/g, ' '),
+          artist: f.artist || f.creator || meta.creator || '',
+          page: `https://archive.org/details/${id}`,
+        }));
+    })).then((results) => results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []))));
+  }
+  return trackLists.get(style);
+}
+
+async function setMusicStyle(style) {
+  state.musicStyle = style;
+  storage('armony:musicStyle', style);
+  renderChips();
+  const tracks = await loadMusicStyle(style);
+  if (state.musicStyle !== style) return;
+  state.tracks = shuffle(tracks.slice());
+  renderPlaylist();
+  if (state.started) playTrack(0);
 }
 
 let trackToken = 0;
@@ -235,15 +349,24 @@ function playTrack(index) {
     audio.play().then(() => token === trackToken && fadeInAudio()).catch(() => {});
   }
 
-  const credit = $('#trackCredit');
-  credit.textContent = '';
-  const link = document.createElement('a');
-  link.href = track.page;
-  link.target = '_blank';
-  link.rel = 'noopener';
-  link.textContent = track.title;
-  credit.append('♪ ', link, track.artist ? ` — ${track.artist}` : '');
+  $('#trackCredit').replaceChildren('♪ ', creditLink(track.title, track.page), track.artist ? ` — ${track.artist}` : '');
+  renderPlaylist();
+
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: track.title,
+      artist: track.artist,
+      album: `Armony Flow · ${MUSIC_STYLES[state.musicStyle].label}`,
+    });
+  }
 }
+
+// Voltar: nos primeiros segundos vai para a faixa anterior; depois reinicia a atual
+function prevTrack() {
+  if (audio.currentTime > 3) audio.currentTime = 0;
+  else playTrack(state.trackIndex - 1);
+}
+const nextTrack = () => playTrack(state.trackIndex + 1);
 
 function fadeInAudio() {
   const start = performance.now();
@@ -255,25 +378,97 @@ function fadeInAudio() {
   requestAnimationFrame(step);
 }
 
+const playingSilence = () => audio.src.startsWith('data:');
+
 // 'ended' e 'error' podem chegar juntos: o token garante que só um deles avança a faixa
-audio.addEventListener('ended', () => playTrack(state.trackIndex + 1));
+audio.addEventListener('ended', () => !playingSilence() && nextTrack());
 audio.addEventListener('error', () => {
-  if (!audio.error) return;
+  if (!audio.error || playingSilence()) return;
   const token = trackToken;
   clearTimeout(skipTimer);
-  skipTimer = setTimeout(() => token === trackToken && playTrack(state.trackIndex + 1), 1000);
+  skipTimer = setTimeout(() => token === trackToken && nextTrack(), 1000);
 });
 
 // Só uma instância toca por vez: abrir o quadro em outra aba/janela pausa as demais
 const instanceId = Math.random().toString(36).slice(2);
 const channel = 'BroadcastChannel' in window ? new BroadcastChannel('armony-flow') : null;
-audio.addEventListener('play', () => channel?.postMessage({ playing: instanceId }));
+audio.addEventListener('play', () => !playingSilence() && channel?.postMessage({ playing: instanceId }));
 if (channel) {
   channel.onmessage = (e) => {
     if (e.data?.playing && e.data.playing !== instanceId && !state.paused) setPaused(true);
   };
 }
 window.addEventListener('pagehide', () => audio.pause());
+
+// Teclas de mídia, fones Bluetooth e a tela de bloqueio do iPad
+if ('mediaSession' in navigator) {
+  const handlers = {
+    play: () => setPaused(false),
+    pause: () => setPaused(true),
+    previoustrack: prevTrack,
+    nexttrack: nextTrack,
+  };
+  for (const [action, fn] of Object.entries(handlers)) {
+    try { navigator.mediaSession.setActionHandler(action, fn); } catch { /* ação não suportada */ }
+  }
+}
+
+// ---------- painel de playlist ----------
+
+function renderChips() {
+  const build = (container, styles, current, onPick) => {
+    container.replaceChildren(...Object.entries(styles).map(([key, { label }]) => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'chip';
+      chip.textContent = label;
+      chip.setAttribute('aria-pressed', String(key === current));
+      chip.addEventListener('click', () => key !== current && onPick(key));
+      return chip;
+    }));
+  };
+  build($('#photoChips'), PHOTO_STYLES, state.photoStyle, setPhotoStyle);
+  build($('#musicChips'), MUSIC_STYLES, state.musicStyle, setMusicStyle);
+}
+
+function renderPlaylist() {
+  const list = $('#trackList');
+  list.replaceChildren(...state.tracks.map((track, i) => {
+    const li = document.createElement('li');
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    const title = document.createElement('span');
+    title.className = 'track-title';
+    title.textContent = track.title;
+    const artist = document.createElement('span');
+    artist.className = 'track-artist';
+    artist.textContent = track.artist;
+    btn.append(title, artist);
+    if (i === state.trackIndex && state.started) {
+      li.className = 'current';
+      btn.setAttribute('aria-current', 'true');
+    }
+    btn.addEventListener('click', () => playTrack(i));
+    li.append(btn);
+    return li;
+  }));
+  if (!state.tracks.length) {
+    const li = document.createElement('li');
+    li.className = 'empty';
+    li.textContent = 'carregando músicas…';
+    list.append(li);
+  }
+}
+
+const panel = $('#panel');
+const panelOpen = () => !panel.hidden;
+
+function setPanel(open) {
+  panel.hidden = !open;
+  $('#listBtn').setAttribute('aria-expanded', String(open));
+  if (open) $('#trackList .current')?.scrollIntoView({ block: 'center' });
+  wake();
+}
 
 // ---------- controles ----------
 
@@ -283,7 +478,8 @@ function setPaused(paused) {
   $('#playBtn').setAttribute('aria-label', paused ? 'Tocar' : 'Pausar');
   slides.forEach((s) => s.querySelector('img')?.getAnimations().forEach((a) => (paused ? a.pause() : a.play())));
   if (paused) audio.pause();
-  else if (audio.src) audio.play().catch(() => {});
+  else if (audio.src && !playingSilence()) audio.play().catch(() => {});
+  if ('mediaSession' in navigator) navigator.mediaSession.playbackState = paused ? 'paused' : 'playing';
 }
 
 function setMuted(muted) {
@@ -314,25 +510,37 @@ if (!(docEl.requestFullscreen || docEl.webkitRequestFullscreen)) body.classList.
   })
 );
 
+$('#prevBtn').addEventListener('click', prevTrack);
 $('#playBtn').addEventListener('click', () => setPaused(!state.paused));
+$('#nextBtn').addEventListener('click', nextTrack);
 $('#muteBtn').addEventListener('click', () => setMuted(!audio.muted));
+$('#listBtn').addEventListener('click', () => setPanel(!panelOpen()));
+$('#closePanel').addEventListener('click', () => setPanel(false));
 $('#fsBtn').addEventListener('click', toggleFullscreen);
+
+// Clicar fora do painel fecha
+document.addEventListener('pointerdown', (e) => {
+  if (panelOpen() && !panel.contains(e.target) && !$('#listBtn').contains(e.target)) setPanel(false);
+});
 
 document.addEventListener('keydown', (e) => {
   if (!state.started) return;
-  if (e.code === 'Space') { e.preventDefault(); setPaused(!state.paused); }
+  if (e.key === 'Escape' && panelOpen()) setPanel(false);
+  else if (e.code === 'Space' && !(e.target instanceof HTMLButtonElement)) { e.preventDefault(); setPaused(!state.paused); }
   else if (e.key === 'm' || e.key === 'M') setMuted(!audio.muted);
   else if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+  else if (e.key === 'p' || e.key === 'P') setPanel(!panelOpen());
   else if (e.key === 'ArrowRight') advance();
-  else if (e.key === 'n' || e.key === 'N') playTrack(state.trackIndex + 1);
+  else if (e.key === 'n' || e.key === 'N') nextTrack();
+  else if (e.key === 'b' || e.key === 'B') prevTrack();
 });
 
-// Esconde controles e cursor quando o mouse fica parado
+// Esconde controles e cursor quando o mouse fica parado (menos com o painel aberto)
 let idleTimer;
 function wake() {
   body.classList.remove('idle');
   clearTimeout(idleTimer);
-  if (state.started) idleTimer = setTimeout(() => body.classList.add('idle'), CONFIG.idleMs);
+  if (state.started && !panelOpen()) idleTimer = setTimeout(() => body.classList.add('idle'), CONFIG.idleMs);
 }
 ['mousemove', 'mousedown', 'touchstart', 'keydown'].forEach((evt) =>
   document.addEventListener(evt, wake, { passive: true })
@@ -348,8 +556,16 @@ document.addEventListener('visibilitychange', () => {
 
 // ---------- início ----------
 
-const photosLoading = loadPhotos().catch(() => {});
-const tracksLoading = loadTracks().catch(() => {});
+const savedPhoto = storage('armony:photoStyle');
+const savedMusic = storage('armony:musicStyle');
+if (savedPhoto in PHOTO_STYLES) state.photoStyle = savedPhoto;
+if (savedMusic in MUSIC_STYLES) state.musicStyle = savedMusic;
+renderChips();
+renderPlaylist();
+
+// já começa a baixar enquanto a tela inicial está aberta
+const photosLoading = loadPhotoStyle(state.photoStyle);
+setMusicStyle(state.musicStyle);
 
 $('#startBtn').addEventListener('click', async () => {
   if (state.started) return;
@@ -358,11 +574,15 @@ $('#startBtn').addEventListener('click', async () => {
   setMuted(storage('armony:muted') === '1');
   keepAwake();
 
-  // Começa a música ainda dentro do clique, para o navegador liberar o autoplay
+  // Toca algo ainda dentro do clique para o navegador liberar o autoplay (Safari/iOS).
+  // Se as músicas ainda não chegaram, setMusicStyle começa a tocar quando chegarem.
   if (state.tracks.length) playTrack(0);
-  else tracksLoading.then(() => playTrack(0));
+  else {
+    audio.src = SILENCE;
+    audio.play().catch(() => {});
+  }
 
-  await photosLoading;
+  state.photos = await photosLoading;
   if (!state.photos.length) {
     $('#startBtn .hint').textContent = 'não foi possível carregar as fotos';
     return;
