@@ -24,7 +24,8 @@ It has no account, no ads, no API keys and no build step. It's three static file
 - 🎵 **Five music styles**: Lofi, Jazz, Piano, Classical and Nature. All tracks are Creative Commons or public domain, streamed from the Internet Archive.
 - 🏔 **Seven photo styles**: Landscapes, Mountains, Water, Forests, Countryside, Cities, or Everything.
 - 📃 **Playlist**: see what's playing, jump to any track, skip forward or back.
-- 🎛 **Settings panel that fits any screen**: Music and Photos tabs, style cards with cover photos, and a single scroll area. It opens as a floating panel on desktop and tablets, a bottom sheet on phones held upright, and a side sheet on phones held sideways.
+- 🫧 **Liquid Glass interface**: follows Apple's current design language. Controls float over the photo on clear glass, the settings panel uses regular glass, and everything stays monochrome so the landscape keeps the color. The start screen shows the first landscape blurred behind the title, and it comes into focus when you press Start.
+- 🎛 **Settings panel that fits any screen**: Music and Photos tabs, style cards with cover photos, and a single scroll area. It opens as a floating panel on desktop and tablets, a sheet you can drag down to dismiss on phones held upright, and a side sheet on phones held sideways.
 - 🌍 **English and Portuguese**: picked automatically from your browser language and time zone, and can be switched at any time.
 - 🖥 **Made to run all day**: keeps the screen awake, hides the controls when idle, and works with media keys, Bluetooth headphones and the iPad lock screen.
 - 📱 **Works on phones and tablets**: covers the whole screen on iPad and iPhone, notch and rounded corners included.
@@ -105,7 +106,8 @@ Armony Flow is plain HTML, CSS and JavaScript, with no framework and no dependen
 
 - **Images are decoded before they're shown.** The `<img>` that goes on screen is the same element that was preloaded and `decode()`d, so the browser never has to decode a large JPEG in the middle of a crossfade.
 - **Animations run on the GPU.** The zoom is a Web Animations API transform, and the crossfade is an opacity transition, so both run on the compositor. A tiny `rotate(0.01deg)` stops Firefox from snapping the slow-moving layer to whole pixels, which would otherwise make the motion look jittery.
-- **Nothing expensive sits over the animation.** The controls use `visibility: hidden` when idle rather than only `opacity: 0`. The blur effect exists only while the settings panel is open.
+- **Glass costs nothing while you're not looking.** Blurring over a moving photo is expensive, so the glass controls use `visibility: hidden` when idle rather than only `opacity: 0`, which removes the blur entirely until you move the mouse or touch the screen.
+- **It respects accessibility settings.** Reduce Transparency swaps the glass for solid surfaces, Increase Contrast strengthens text and edges, and Reduce Motion turns off the zoom-in reveal and the springy transitions.
 - **Only one tab plays at a time.** A `BroadcastChannel` pauses other open copies of the app, so audio never doubles up.
 - **Photos start fast.** The first page of a category is enough to start. The rest loads in the background and is shuffled in ahead of the current photo.
 

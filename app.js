@@ -11,7 +11,8 @@ const CONFIG = {
 
 const I18N = {
   pt: {
-    tapToStart: 'toque para começar',
+    start: 'Começar',
+    tagline: 'Fotos de paisagens com música ambiente',
     loading: 'carregando…',
     photoError: 'não foi possível carregar as fotos',
     loadingTracks: 'carregando músicas…',
@@ -34,7 +35,8 @@ const I18N = {
     Space: 'espaço',
   },
   en: {
-    tapToStart: 'tap to begin',
+    start: 'Start',
+    tagline: 'Landscape photos with ambient music',
     loading: 'loading…',
     photoError: "couldn't load the photos",
     loadingTracks: 'loading music…',
@@ -120,8 +122,10 @@ const PHOTO_STYLES = {
 const coverUrl = (file) =>
   `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}?width=500`;
 
-// 24×24 icons for the music style cards
+// 24×24 icons for the music style cards and the credits
 const ICONS = {
+  camera: '<path d="M9.2 4.5h5.6l1.3 1.8h2.4A2.5 2.5 0 0 1 21 8.8v8.7a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5V8.8a2.5 2.5 0 0 1 2.5-2.5h2.4z"/><circle cx="12" cy="13" r="3.4" fill="none" stroke="#000" stroke-opacity=".5" stroke-width="1.7"/>',
+  note: '<path d="M19 4.6v10.9a2.9 2.9 0 1 1-1.8-2.7V8.2L10 9.8v7.7a2.9 2.9 0 1 1-1.8-2.7V6.6c0-.5.3-.9.8-1l8.8-2c.6-.1 1.2.3 1.2 1z"/>',
   headphones: '<path class="stroke" d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="14" width="4.5" height="6.5" rx="1.5"/><rect x="16.5" y="14" width="4.5" height="6.5" rx="1.5"/>',
   vinyl: '<circle class="stroke" cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.5"/><path class="stroke thin" d="M12 6.5a5.5 5.5 0 0 1 5.5 5.5"/>',
   piano: '<rect class="stroke" x="3.5" y="5" width="17" height="14" rx="2"/><path d="M8 5h2.2v8H8zM13.8 5H16v8h-2.2z"/><path class="stroke thin" d="M9.1 13v6M14.9 13v6M12 5v14"/>',
@@ -134,7 +138,6 @@ const MUSIC_STYLES = {
   lofi: {
     label: 'Lofi',
     icon: 'headphones',
-    hue: 280,
     items: [
       'chillhop-raw-cuts',                       // Chillhop Music — CC BY-NC-ND 4.0
       'loyalty-freak-music-lofi-ambient-songs',  // Loyalty Freak Music — CC0
@@ -145,7 +148,6 @@ const MUSIC_STYLES = {
   jazz: {
     label: 'Jazz',
     icon: 'vinyl',
-    hue: 30,
     items: [
       'DWK123',  // ProleteR — Curses From Past Times — CC BY-NC-ND 3.0
       'DWK127',  // Kova — Cookin' Session — CC BY-NC-ND 3.0
@@ -155,7 +157,6 @@ const MUSIC_STYLES = {
   piano: {
     label: 'Piano',
     icon: 'piano',
-    hue: 215,
     items: [
       'ca315_fp',                                // Fabrizio Paterlini — Viandanze — CC BY-NC-ND 3.0
       'WM056',                                   // Lee Rosevere — Play 2 — CC BY-NC-SA 2.5
@@ -167,7 +168,6 @@ const MUSIC_STYLES = {
   classical: {
     label: { pt: 'Clássica', en: 'Classical' },
     icon: 'notes',
-    hue: 350,
     items: [
       'musopen-chopin',  // Musopen — Chopin's complete works — CC0
       'Musopen-Libre',   // Musopen — symphonies — CC BY-SA 3.0
@@ -176,7 +176,6 @@ const MUSIC_STYLES = {
   nature: {
     label: { pt: 'Natureza', en: 'Nature' },
     icon: 'leaf',
-    hue: 140,
     items: [
       'relaxingrainsounds',          // rain — CC0
       'ocean-sea-sounds',            // ocean — CC0
@@ -388,11 +387,31 @@ function showPhoto({ photo, img }) {
   renderPhotoCredit();
 }
 
+function svgIcon(name) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.innerHTML = ICONS[name];
+  return svg;
+}
+
+// One credit line: icon, linked title at full strength, then who made it in secondary color
+function renderCredit(el, icon, title, href, meta) {
+  const parts = [svgIcon(icon), creditLink(title, href)];
+  if (meta) {
+    const span = document.createElement('span');
+    span.className = 'meta';
+    span.textContent = meta;
+    parts.push(span);
+  }
+  el.replaceChildren(...parts);
+}
+
 function renderPhotoCredit() {
   const photo = state.currentPhoto;
   if (!photo) return;
-  $('#photoCredit').replaceChildren('📷 ', creditLink(photo.title, photo.page),
-    ` — ${photo.artist || t('unknownAuthor')}${photo.license ? ` (${photo.license})` : ''}`);
+  const author = photo.artist || t('unknownAuthor');
+  renderCredit($('#photoCredit'), 'camera', photo.title, photo.page, photo.license ? `${author}, ${photo.license}` : author);
 }
 
 async function advance() {
@@ -477,7 +496,7 @@ function playTrack(index) {
     audio.play().then(() => token === trackToken && fadeInAudio()).catch(() => {});
   }
 
-  $('#trackCredit').replaceChildren('♪ ', creditLink(track.title, track.page), track.artist ? ` — ${track.artist}` : '');
+  renderCredit($('#trackCredit'), 'note', track.title, track.page, track.artist);
   renderPlaylist();
 
   if ('mediaSession' in navigator) {
@@ -553,15 +572,19 @@ function styleCard(key, current, onPick, content) {
 }
 
 function renderStyles() {
-  $('#musicCards').replaceChildren(...Object.entries(MUSIC_STYLES).map(([key, style]) => {
-    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    icon.setAttribute('viewBox', '0 0 24 24');
-    icon.innerHTML = ICONS[style.icon];
+  const cardParts = (art, style) => {
+    const tile = document.createElement('span');
+    tile.className = 'art';
+    tile.append(art);
     const name = document.createElement('span');
+    name.className = 'card-name';
     name.textContent = label(style);
-    const card = styleCard(key, state.musicStyle, setMusicStyle, [icon, name]);
+    return [tile, name];
+  };
+
+  $('#musicCards').replaceChildren(...Object.entries(MUSIC_STYLES).map(([key, style]) => {
+    const card = styleCard(key, state.musicStyle, setMusicStyle, cardParts(svgIcon(style.icon), style));
     card.className = 'music-card';
-    card.style.setProperty('--hue', style.hue);
     return card;
   }));
 
@@ -571,14 +594,16 @@ function renderStyles() {
     img.alt = '';
     img.loading = 'lazy';
     img.decoding = 'async';
-    const name = document.createElement('span');
-    name.textContent = label(style);
-    const card = styleCard(key, state.photoStyle, setPhotoStyle, [img, name]);
+    const card = styleCard(key, state.photoStyle, setPhotoStyle, cardParts(img, style));
     card.className = 'photo-card';
     return card;
   }));
 
-  $('#langToggle').replaceChildren(...Object.entries(LANGUAGES).map(([key, item]) => {
+  const langToggle = $('#langToggle');
+  const thumb = document.createElement('span');
+  thumb.className = 'thumb';
+  langToggle.dataset.active = lang;
+  langToggle.replaceChildren(thumb, ...Object.entries(LANGUAGES).map(([key, item]) => {
     const btn = styleCard(key, lang, setLang, [item.label]);
     btn.title = item.name;
     btn.setAttribute('aria-label', item.name);
@@ -626,7 +651,7 @@ function renderPlaylist() {
 
 const panel = $('#panel');
 const panelBody = $('.panel-body');
-const panelOpen = () => !panel.hidden;
+const panelOpen = () => !panel.hidden && !panel.classList.contains('closing');
 let panelTab = 'music';
 
 function setTab(tab) {
@@ -635,7 +660,7 @@ function setTab(tab) {
     tabEl.setAttribute('aria-selected', String(name === tab));
     pane.hidden = name !== tab;
   }
-  panel.dataset.tab = tab;
+  $('.tabs').dataset.active = tab;
   panelBody.scrollTop = 0;
   if (tab === 'music') scrollToCurrentTrack();
 }
@@ -647,12 +672,67 @@ function scrollToCurrentTrack() {
   panelBody.scrollTop = Math.max(0, target);
 }
 
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
 function setPanel(open) {
-  panel.hidden = !open;
   $('#listBtn').setAttribute('aria-expanded', String(open));
-  if (open) setTab(panelTab);
+  if (open) {
+    panel.classList.remove('closing');
+    panel.style.transform = '';
+    panel.hidden = false;
+    setTab(panelTab);
+  } else if (panelOpen()) {
+    // play the closing animation first, then hide
+    if (reducedMotion.matches) panel.hidden = true;
+    else {
+      panel.classList.add('closing');
+      panel.addEventListener('animationend', () => {
+        if (!panel.classList.contains('closing')) return;
+        panel.classList.remove('closing');
+        panel.style.transform = '';
+        panel.hidden = true;
+      }, { once: true });
+    }
+  }
   wake();
 }
+
+// On phones the panel is a sheet: drag the grabber or header down to dismiss it
+const phoneSheet = matchMedia('(max-width: 600px) and (orientation: portrait)');
+let drag = null;
+
+panel.addEventListener('pointerdown', (e) => {
+  if (!phoneSheet.matches || !e.target.closest('.grabber, .panel-head') || e.target.closest('button')) return;
+  drag = { startY: e.clientY, lastY: e.clientY, lastT: performance.now(), velocity: 0 };
+  panel.classList.add('dragging');
+  panel.setPointerCapture(e.pointerId);
+});
+panel.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  const now = performance.now();
+  drag.velocity = (e.clientY - drag.lastY) / Math.max(1, now - drag.lastT);
+  drag.lastY = e.clientY;
+  drag.lastT = now;
+  // pulling up resists; pulling down follows the finger
+  const dy = e.clientY - drag.startY;
+  panel.style.transform = `translateY(${dy > 0 ? dy : dy / 6}px)`;
+});
+function endDrag(e) {
+  if (!drag) return;
+  // a cancelled pointer can report a stale position, so fall back to the last move
+  const dy = (e.type === 'pointercancel' ? drag.lastY : e.clientY) - drag.startY;
+  const dismiss = dy > 110 || (dy > 20 && drag.velocity > 0.5);
+  drag = null;
+  panel.classList.remove('dragging');
+  if (dismiss) setPanel(false);
+  else {
+    panel.style.transition = 'transform 0.45s var(--ease-sheet)';
+    panel.style.transform = '';
+    setTimeout(() => (panel.style.transition = ''), 450);
+  }
+}
+panel.addEventListener('pointerup', endDrag);
+panel.addEventListener('pointercancel', endDrag);
 
 // ---------- on-screen text ----------
 
@@ -664,10 +744,10 @@ function setButtonLabel(el, key) {
   if (el.dataset.key) el.title = `${text} (${t(el.dataset.key)})`;
 }
 
-function setHint(key) {
-  const hint = $('#startBtn .hint');
-  hint.dataset.i18n = key;
-  hint.textContent = t(key);
+function setStatus(key) {
+  const status = $('#startStatus');
+  status.dataset.i18n = key;
+  status.textContent = key ? t(key) : '';
 }
 
 function applyI18n() {
@@ -781,14 +861,27 @@ if (savedPhoto in PHOTO_STYLES) state.photoStyle = savedPhoto;
 if (savedMusic in MUSIC_STYLES) state.musicStyle = savedMusic;
 applyI18n();
 
-// start downloading while the start screen is still showing
+// Start downloading while the start screen is still showing: the photo list, the first
+// photo at full size, and a tiny copy of it that sits blurred behind the title.
 const photosLoading = loadPhotoStyle(state.photoStyle);
 setMusicStyle(state.musicStyle);
+
+const firstPhoto = photosLoading.then((list) => {
+  state.photos = list;
+  state.photoIndex = -1;
+  if (!list.length) return null;
+  const thumb = new Image();
+  thumb.onload = () => {
+    $('#startBg').style.backgroundImage = `url("${thumb.src}")`;
+    $('#startBg').classList.add('ready');
+  };
+  thumb.src = list[0].url.replace(/\/\d+px-/, '/330px-');
+  return preloadNext();
+});
 
 $('#startBtn').addEventListener('click', async () => {
   if (state.started) return;
   state.started = true;
-  setHint('loading');
   setMuted(storage('armony:muted') === '1');
   keepAwake();
 
@@ -800,16 +893,18 @@ $('#startBtn').addEventListener('click', async () => {
     audio.play().catch(() => {});
   }
 
-  state.photos = await photosLoading;
-  if (!state.photos.length) {
-    setHint('photoError');
+  const slow = setTimeout(() => setStatus('loading'), 400);
+  const first = await firstPhoto;
+  clearTimeout(slow);
+  if (!first) {
+    setStatus('photoError');
     return;
   }
-  state.photoIndex = -1;
-  const first = await preloadNext();
-  if (first) showPhoto(first);
+  setStatus('');
+  showPhoto(first);
   state.nextReady = preloadNext();
-  $('#start').classList.add('gone');
+  // title steps back, the blurred photo comes into focus, then the real one takes over
+  $('#start').classList.add('revealing', 'gone');
   wake();
   requestAnimationFrame(tick);
 });
