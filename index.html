@@ -12,10 +12,16 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Armony Flow" />
   <title>Armony Flow</title>
-  <!-- Apple devices use SF Pro through -apple-system; Inter is the closest match elsewhere -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <!-- Apple devices use SF Pro, Inter is the closest match elsewhere; the clock uses Roboto Flex
+       everywhere for its width and figure-height axes (tall numerals without distortion) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" />
+  <!-- loaded without blocking the first paint: the system font shows until these arrive -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=Roboto+Flex:opsz,wdth,wght,YTFI@8..144,25..151,100..1000,560..788&display=swap" media="print" onload="this.media='all'" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -24,6 +30,19 @@
     <div class="slide" id="slideB"><img alt="" /></div>
     <div class="vignette"></div>
   </div>
+
+  <!-- lock-screen style clock, optional -->
+  <div id="clock" class="clock" hidden aria-hidden="true">
+    <div id="clockDate" class="clock-date"></div>
+    <div id="clockTime" class="clock-time"></div>
+  </div>
+
+  <!-- the sleep timer fades the screen to black; a tap brings it back -->
+  <div id="sleepShade" class="sleep-shade" hidden>
+    <p data-i18n="sleepResume">Tap to continue</p>
+  </div>
+
+  <div id="toast" class="toast glass" role="status" aria-live="polite" hidden></div>
 
   <!-- Start screen: the first landscape waits behind, blurred, and comes into focus on start -->
   <div id="start">
@@ -40,9 +59,15 @@
   </div>
 
   <div id="ui">
-    <div id="credits">
-      <div id="photoCredit" class="credit"></div>
-      <div id="trackCredit" class="credit"></div>
+    <div class="credits-row">
+      <button id="favBtn" class="fav-btn" type="button" aria-pressed="false" data-i18n-label="favorite" data-key="L">
+        <svg class="i-heart" viewBox="0 0 24 24"><path class="stroke" d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"/></svg>
+        <svg class="i-heart-fill" viewBox="0 0 24 24"><path d="M12 20.6c-.2 0-.4-.1-.6-.2C10.6 19.9 3.5 15.2 3.5 9.8a5 5 0 0 1 8.5-3.5 5 5 0 0 1 8.5 3.5c0 5.4-7.1 10.1-7.9 10.6-.2.1-.4.2-.6.2z"/></svg>
+      </button>
+      <div id="credits">
+        <div id="photoCredit" class="credit"></div>
+        <div id="trackCredit" class="credit"></div>
+      </div>
     </div>
     <div id="controls">
       <div class="capsule glass">
@@ -58,6 +83,11 @@
         </button>
       </div>
       <div class="capsule glass">
+        <!-- only while the sleep timer runs: shows the time left -->
+        <button id="sleepBtn" class="sleep-btn" type="button" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 14.6A8.5 8.5 0 0 1 9.4 3.8a.6.6 0 0 0-.8-.7A9 9 0 1 0 20.9 15.4a.6.6 0 0 0-.7-.8z"/></svg>
+          <span id="sleepLeft"></span>
+        </button>
         <button id="listBtn" type="button" aria-expanded="false" aria-controls="panel" data-i18n-label="panel" data-key="P">
           <svg viewBox="0 0 24 24"><path class="stroke" d="M3.5 6h11M3.5 11h11M3.5 16h6.5"/><path d="M17.2 18.4a2.3 2.3 0 1 1-1.5-2.2V6.9c0-.6.4-1 1-1.1l3.2-.6c.5-.1.9.3.9.8v1.3c0 .4-.3.8-.7.8l-2.9.6z"/></svg>
         </button>
@@ -79,10 +109,11 @@
       <button id="closePanel" class="icon-btn" type="button" data-i18n-label="close">
         <svg viewBox="0 0 24 24"><path class="stroke" d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
       </button>
-      <div class="tabs segmented" role="tablist" data-active="music">
+      <div class="tabs segmented" role="tablist" style="--count: 3; --index: 0">
         <span class="thumb" aria-hidden="true"></span>
-        <button id="tabMusic" class="tab" type="button" role="tab" aria-selected="true" aria-controls="paneMusic" data-i18n="music">Music</button>
-        <button id="tabPhotos" class="tab" type="button" role="tab" aria-selected="false" aria-controls="panePhotos" data-i18n="photos">Photos</button>
+        <button id="tabMusic" class="tab" type="button" role="tab" aria-selected="true" aria-controls="paneMusic" data-tab="music" data-i18n="music">Music</button>
+        <button id="tabPhotos" class="tab" type="button" role="tab" aria-selected="false" aria-controls="panePhotos" data-tab="photos" data-i18n="photos">Photos</button>
+        <button id="tabDisplay" class="tab" type="button" role="tab" aria-selected="false" aria-controls="paneDisplay" data-tab="display" data-i18n="display">Display</button>
       </div>
       <div id="langToggle" class="lang segmented" role="group" data-i18n-label="language"></div>
     </header>
@@ -90,17 +121,78 @@
     <!-- the only scroll container in the panel: no nested scrolling on small screens -->
     <div class="panel-body">
       <section id="paneMusic" role="tabpanel" aria-labelledby="tabMusic">
+        <div class="volume-row">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9.6v4.8c0 .6.5 1 1 1h2.6l4.3 3.7c.6.5 1.6.1 1.6-.8V5.7c0-.9-1-1.3-1.6-.8L8.6 8.6H6c-.5 0-1 .4-1 1z"/></svg>
+          <input id="volume" class="slider" type="range" min="0" max="1" step="0.01" data-i18n-label="volume" />
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9.6v4.8c0 .6.5 1 1 1h2.6l4.3 3.7c.6.5 1.6.1 1.6-.8V5.7c0-.9-1-1.3-1.6-.8L5.6 8.6H3c-.5 0-1 .4-1 1z"/><path class="stroke" d="M14.8 9a4.2 4.2 0 0 1 0 6M17.6 6.4a8 8 0 0 1 0 11.2"/></svg>
+        </div>
         <div id="musicCards" class="music-cards"></div>
+        <h2 class="list-head"><span data-i18n="natureSounds">Nature sounds</span></h2>
+        <div id="ambientList" class="group"></div>
         <h2 class="list-head"><span data-i18n="playlist">Playlist</span><span id="trackCount"></span></h2>
         <ol id="trackList"></ol>
       </section>
       <section id="panePhotos" role="tabpanel" aria-labelledby="tabPhotos" hidden>
+        <h2 class="list-head first"><span data-i18n="photoDuration">Time per photo</span></h2>
+        <div id="durationPicker" class="segmented picker" role="group" data-i18n-label="photoDuration"></div>
+        <h2 class="list-head"><span data-i18n="photoStyle">Style</span></h2>
         <div id="photoCards" class="photo-cards"></div>
+      </section>
+      <section id="paneDisplay" role="tabpanel" aria-labelledby="tabDisplay" hidden>
+        <div class="group">
+          <label class="row">
+            <span class="row-icon"><svg viewBox="0 0 24 24"><circle class="stroke" cx="12" cy="12" r="8.5"/><path class="stroke" d="M12 7.5V12l3 2"/></svg></span>
+            <span class="row-label" data-i18n="clock">Clock</span>
+            <input id="clockToggle" class="switch" type="checkbox" role="switch" />
+          </label>
+          <div id="clockPosRow" class="row row-control clock-options" hidden>
+            <div id="clockPosPicker" class="segmented picker icons" role="group" data-i18n-label="clockPosition"></div>
+            <div id="clockSizePicker" class="segmented picker" role="group" data-i18n-label="clockSize"></div>
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="row">
+            <span class="row-icon"><svg viewBox="0 0 24 24"><path d="M20 14.6A8.4 8.4 0 0 1 9.4 4a.5.5 0 0 0-.7-.6A8.9 8.9 0 1 0 20.6 15.3a.5.5 0 0 0-.6-.7z"/></svg></span>
+            <span class="row-label" data-i18n="sleepTimer">Sleep timer</span>
+            <span id="sleepNote" class="row-value"></span>
+          </div>
+          <div class="row row-control">
+            <div id="sleepPicker" class="segmented picker" role="group" data-i18n-label="sleepTimer"></div>
+          </div>
+        </div>
+        <p class="group-note" data-i18n="sleepHelp">The music and the screen fade out slowly over the last minute.</p>
+
+        <!-- hidden where lite is always on (TVs, low-memory devices) -->
+        <div id="liteGroup">
+          <div class="group">
+            <label class="row">
+              <span class="row-icon"><svg viewBox="0 0 24 24"><path class="stroke" d="M4.5 16.5a7.5 7.5 0 1 1 15 0"/><path class="stroke" d="M12 16.5l3.5-4.5"/></svg></span>
+              <span class="row-label" data-i18n="liteMode">Lite mode</span>
+              <input id="liteToggle" class="switch" type="checkbox" role="switch" />
+            </label>
+          </div>
+          <p class="group-note" data-i18n="liteHelp">Swaps the blurred glass for a solid background. Keeps things smooth on older devices.</p>
+        </div>
+
+        <div class="group">
+          <button id="castBtn" class="row" type="button" hidden>
+            <span class="row-icon"><svg viewBox="0 0 24 24"><path class="stroke" d="M3.5 17.5v-11a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2h-4"/><path class="stroke" d="M3.5 13.5a6 6 0 0 1 6 6M3.5 16.8a2.7 2.7 0 0 1 2.7 2.7"/></svg></span>
+            <span id="castLabel" class="row-label" data-i18n="cast">Show on TV</span>
+            <span id="castValue" class="row-value"></span>
+          </button>
+          <button id="installBtn" class="row" type="button" hidden>
+            <span class="row-icon"><svg viewBox="0 0 24 24"><rect class="stroke" x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path class="stroke" d="M12 8v6M9.5 11.5 12 14l2.5-2.5"/></svg></span>
+            <span class="row-label" data-i18n="install">Install the app</span>
+          </button>
+        </div>
+        <p id="displayNote" class="group-note" hidden></p>
       </section>
     </div>
   </aside>
 
-  <audio id="audio" preload="auto"></audio>
+  <!-- crossorigin lets the music go through Web Audio, which is what makes volume work on iPhone and iPad -->
+  <audio id="audio" preload="auto" crossorigin="anonymous"></audio>
   <script src="app.js"></script>
 </body>
 </html>

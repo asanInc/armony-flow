@@ -203,6 +203,7 @@ svg .stroke { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap:
   transition: filter 1.4s var(--ease-sheet), transform 1.4s var(--ease-sheet);
 }
 #start.gone { opacity: 0; pointer-events: none; transition: opacity 0.9s ease 0.5s; }
+#start[hidden] { display: none; }
 
 /* ---------- Controls layer (auto-hide) ---------- */
 #ui {
@@ -279,6 +280,146 @@ body.idle #ui { opacity: 0; visibility: hidden; transition: opacity 0.8s ease, v
 /* press state: the glass lights up under the finger and the glyph dips */
 .capsule button:active { background: rgba(255, 255, 255, 0.2); transform: scale(0.88); }
 .capsule button[aria-expanded="true"] { background: rgba(255, 255, 255, 0.24); }
+/* sleep timer running: a pill with a moon and the time left */
+.capsule button.sleep-btn {
+  width: auto;
+  display: flex;
+  gap: 0.35em;
+  padding: 0 calc(var(--btn) * 0.3) 0 calc(var(--btn) * 0.24);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  font: inherit;
+  font-size: calc(var(--icon) * 0.62);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.capsule button.sleep-btn[hidden] { display: none; }
+.capsule button.sleep-btn svg { width: calc(var(--icon) * 0.8); height: calc(var(--icon) * 0.8); }
+
+/* favorite heart, next to the credits */
+.credits-row { display: flex; align-items: center; gap: 0.5em; min-width: 0; }
+.fav-btn {
+  flex-shrink: 0;
+  width: calc(var(--btn) * 0.8);
+  height: calc(var(--btn) * 0.8);
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--label);
+  cursor: pointer;
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.45));
+  transition: transform 0.4s var(--ease-spring);
+}
+.fav-btn svg { width: 58%; height: 58%; }
+.fav-btn .i-heart-fill { display: none; }
+.fav-btn[aria-pressed="true"] .i-heart { display: none; }
+.fav-btn[aria-pressed="true"] .i-heart-fill { display: block; animation: heart-pop 0.45s var(--ease-spring); }
+.fav-btn:active { transform: scale(0.85); }
+@keyframes heart-pop { 0% { transform: scale(0.6); } 60% { transform: scale(1.18); } }
+
+/* Clock in the spirit of the iOS 26 Lock Screen: white numerals with the date just above.
+   Roboto Flex is a variable font, so "large" is a genuinely condensed, taller design
+   (width and figure-height axes) rather than stretched glyphs. */
+.clock {
+  --base: clamp(64px, min(36vw, 22vh), 340px);
+  --scale: 1;
+  --clock-size: calc(var(--base) * var(--scale));
+  --wdth: 100;
+  --wght: 560;
+  --ytfi: 738;
+  --track: -0.025em;
+  position: fixed;
+  top: calc(var(--safe-top) + 1.5vh);
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+  color: #fff;
+  font-family: "Roboto Flex", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+.clock[hidden] { display: none; }
+.clock[data-size="small"] { --scale: 0.58; --wght: 600; }
+/* tall and narrow, like the adaptive Lock Screen clock */
+.clock[data-size="large"] {
+  --clock-size: clamp(120px, min(70vw, 48vh), 620px);
+  --wdth: 28;
+  --wght: 440;
+  --ytfi: 788;
+  --track: 0em;
+}
+.clock[data-pos="left"] { left: var(--safe-left); align-items: flex-start; }
+.clock[data-pos="center"] { left: 0; right: 0; align-items: center; }
+.clock[data-pos="right"] { right: var(--safe-right); align-items: flex-end; }
+/* a desk clock: centered and a size up */
+.clock[data-pos="middle"] {
+  --base: clamp(72px, min(36vw, 27vh), 420px);
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+}
+.clock[data-pos="middle"][data-size="large"] { --clock-size: clamp(140px, min(72vw, 60vh), 700px); }
+
+.clock-date {
+  font-size: max(15px, calc(var(--base) * 0.2 * min(1, var(--scale) + 0.25)));
+  font-weight: 600;
+  font-variation-settings: "wdth" 100, "opsz" 24;
+  letter-spacing: 0;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.16), 0 4px 18px rgba(0, 0, 0, 0.28);
+  margin-bottom: calc(var(--clock-size) * -0.04);
+}
+.clock-time {
+  font-size: var(--clock-size);
+  font-weight: var(--wght);
+  font-variation-settings: "wdth" var(--wdth), "YTFI" var(--ytfi), "opsz" 144;
+  line-height: 1.05;
+  letter-spacing: var(--track);
+  color: #fff;
+  /* a close shadow for the edge and a long, soft one for depth over bright photos */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.16), 0 12px 48px rgba(0, 0, 0, 0.26);
+}
+
+/* glass pill that confirms an action for a moment */
+.toast {
+  position: fixed;
+  top: var(--safe-top);
+  left: 50%;
+  z-index: 30;
+  max-width: calc(100vw - 32px);
+  padding: 0.7em 1.3em;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: center;
+  opacity: 0;
+  transform: translate(-50%, -12px) scale(0.96);
+  transition: opacity 0.3s ease, transform 0.45s var(--ease-spring);
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+.toast[hidden] { display: none; }
+
+/* sleep timer: the screen fades to black, then waits for a tap */
+.sleep-shade {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: #000;
+  opacity: 0;
+  transition-property: opacity;
+  transition-timing-function: linear;
+  pointer-events: none;
+}
+.sleep-shade[hidden] { display: none; }
+.sleep-shade.dark { opacity: 1; }
+.sleep-shade.asleep { pointer-events: auto; cursor: pointer; }
+.sleep-shade p { font-size: 17px; color: var(--label-3); opacity: 0; transition: opacity 2s ease 1s; }
+.sleep-shade.asleep p { opacity: 1; }
 
 /* ---------- Settings panel ----------
    Regular Liquid Glass: it holds a lot of text, so it blurs and darkens more (HIG). */
@@ -337,7 +478,7 @@ body.idle #ui { opacity: 0; visibility: hidden; transition: opacity 0.8s ease, v
 .icon-btn svg .stroke { stroke-width: 2.6; }
 .icon-btn:active { transform: scale(0.88); }
 
-/* segmented control with a sliding thumb (Music | Photos, PT | EN) */
+/* segmented control with a sliding thumb; --count options, --index selected (set in JS) */
 .segmented {
   position: relative;
   display: grid;
@@ -352,14 +493,13 @@ body.idle #ui { opacity: 0; visibility: hidden; transition: opacity 0.8s ease, v
   top: 2px;
   bottom: 2px;
   left: 2px;
-  width: calc(50% - 2px);
+  width: calc((100% - 4px) / var(--count, 2));
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.22);
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18), inset 0 0.5px 0 rgba(255, 255, 255, 0.4);
+  transform: translateX(calc(var(--index, 0) * 100%));
   transition: transform 0.45s var(--ease-spring);
 }
-.segmented[data-active="photos"] .thumb,
-.segmented[data-active="en"] .thumb { transform: translateX(100%); }
 .segmented button {
   position: relative;
   z-index: 1;
@@ -375,7 +515,13 @@ body.idle #ui { opacity: 0; visibility: hidden; transition: opacity 0.8s ease, v
 .segmented button[aria-selected="true"],
 .segmented button[aria-pressed="true"] { color: var(--label); font-weight: 600; }
 .tabs { flex: 1; }
-.tab { font-size: 0.95em; }
+.tab { font-size: 0.92em; }
+.picker { width: 100%; }
+.picker.icons button { min-height: 2.5em; }
+.picker.icons svg { width: 1.7em; height: 1.7em; }
+.picker.icons svg .stroke { stroke-width: 1.5; }
+.clock-options { flex-direction: column; align-items: stretch; gap: 0.5em; }
+.picker button { min-height: 2.3em; font-size: 0.88em; font-variant-numeric: tabular-nums; }
 .lang button { min-width: 2.5em; font-size: 0.8em; letter-spacing: 0.02em; }
 
 /* the only scroll container in the panel; its edges fade like iOS scroll edge effects */
@@ -470,6 +616,7 @@ body.idle #ui { opacity: 0; visibility: hidden; transition: opacity 0.8s ease, v
 }
 .music-card:active .art, .photo-card:active .art { transform: scale(0.95); }
 
+.list-head.first { margin-top: 0.2em; }
 .list-head {
   display: flex;
   justify-content: space-between;
@@ -539,6 +686,135 @@ body.idle #ui { opacity: 0; visibility: hidden; transition: opacity 0.8s ease, v
 @keyframes eq { from { transform: scaleY(0.25); } to { transform: scaleY(1); } }
 body.paused #trackList .current .track-num i { animation-play-state: paused; }
 
+/* sliders, iOS style: thin track that fills in white, round white knob */
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  min-width: 0;
+  height: 1.8em;
+  background: transparent;
+  cursor: pointer;
+  --fill: 50%;
+}
+.slider::-webkit-slider-runnable-track {
+  height: 0.38em;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--label) var(--fill), rgba(255, 255, 255, 0.18) var(--fill));
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 1.45em;
+  height: 1.45em;
+  margin-top: -0.535em;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 0 0.5px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s var(--ease-spring);
+}
+.slider:active::-webkit-slider-thumb { transform: scale(1.12); }
+.slider::-moz-range-track { height: 0.38em; border-radius: 999px; background: rgba(255, 255, 255, 0.18); }
+.slider::-moz-range-progress { height: 0.38em; border-radius: 999px; background: var(--label); }
+.slider::-moz-range-thumb { width: 1.45em; height: 1.45em; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
+.slider:focus-visible { outline: none; }
+.slider:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--label); outline-offset: 2px; }
+
+.volume-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  margin: 0.2em 0.2em 1.2em;
+  color: var(--label-2);
+}
+.volume-row svg { width: 1.2em; height: 1.2em; flex-shrink: 0; }
+
+/* nature sounds use the grouped rows below; each sound is a row plus its volume */
+.ambient-item + .ambient-item > .row:first-child { box-shadow: inset 0 0.5px 0 var(--separator); }
+.ambient-item .row-control { padding-left: 3.55em; } /* the slider lines up with the label */
+
+/* Display tab: grouped rows, like Settings */
+.group {
+  margin-bottom: 0.9em;
+  border-radius: 1em;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+.row {
+  width: 100%;
+  min-height: 3.1em;
+  display: flex;
+  align-items: center;
+  gap: 0.75em;
+  padding: 0.35em 0.9em;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.row[hidden] { display: none; }
+.row + .row:not(.row-control) { box-shadow: inset 0 0.5px 0 var(--separator); }
+button.row:active { background: var(--fill-2); }
+.row-control { min-height: 0; padding: 0 0.9em 0.9em; cursor: default; }
+.row-icon {
+  width: 1.9em;
+  height: 1.9em;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 0.5em;
+  background: rgba(255, 255, 255, 0.14);
+}
+.row-icon svg { width: 1.15em; height: 1.15em; }
+.row-icon svg .stroke { stroke-width: 1.8; }
+.row-label { flex: 1; min-width: 0; font-size: 0.97em; }
+.row-value { font-size: 0.9em; color: var(--label-2); white-space: nowrap; }
+.group-note {
+  margin: -0.4em 0.9em 1.2em;
+  font-size: 0.8em;
+  line-height: 1.4;
+  color: var(--label-2);
+}
+.group-note[hidden] { display: none; }
+
+/* iOS switch */
+.switch {
+  -webkit-appearance: none;
+  appearance: none;
+  flex-shrink: 0;
+  position: relative;
+  width: 3.15em;
+  height: 1.9em;
+  border-radius: 999px;
+  background: rgba(120, 120, 128, 0.32);
+  cursor: pointer;
+  transition: background 0.25s ease;
+}
+.switch::before {
+  content: '';
+  position: absolute;
+  top: 0.12em;
+  left: 0.12em;
+  width: 1.66em;
+  height: 1.66em;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 3px 1px rgba(0, 0, 0, 0.06);
+  transition: transform 0.35s var(--ease-spring);
+}
+.switch:checked { background: #34c759; }
+.switch:checked::before { transform: translateX(1.25em); }
+.switch:focus-visible { outline: 2px solid var(--label); outline-offset: 2px; }
+
+/* favorites card before there is any favorite */
+.photo-card.empty .art svg { width: 26%; height: 26%; color: var(--label-2); }
+
+/* on the TV there is nothing to press */
+body.receiver #ui,
+body.receiver #panel,
+body.receiver #start { display: none; }
+body.receiver { cursor: none; }
+
 /* hover only where there is a real pointer; on touch it sticks after a tap */
 @media (hover: hover) {
   .capsule button:hover { background: rgba(255, 255, 255, 0.14); }
@@ -547,6 +823,7 @@ body.paused #trackList .current .track-num i { animation-play-state: paused; }
   .segmented button:hover { color: var(--label); }
   .music-card:hover .art, .photo-card:hover .art { transform: scale(1.03); }
   .music-card[aria-pressed="false"]:hover .art { background: rgba(255, 255, 255, 0.16); }
+  .fav-btn:hover { transform: scale(1.08); }
   .music-card:hover .card-name, .photo-card:hover .card-name { color: var(--label); }
   #trackList button:hover { background: var(--fill-2); }
   .start-btn:hover { transform: scale(1.03); }
@@ -568,6 +845,7 @@ body.fullscreen .i-shrink { display: block; }
   :root { --btn: clamp(42px, 11.5vw, 50px); --panel-font: 16px; }
   #ui { flex-direction: column-reverse; align-items: stretch; gap: 14px; }
   #controls { justify-content: center; gap: clamp(8px, 3vw, 14px); }
+  .credits-row { justify-content: center; }
   #credits { align-items: center; }
   .credit { max-width: 100%; }
 
@@ -624,6 +902,12 @@ body.fullscreen .i-shrink { display: block; }
   #controls { gap: 6px; }
 }
 
+/* ---------- Lite mode (TVs, weak GPUs; see app.js) ----------
+   The live blur is redrawn every frame over the moving photo; solid glass costs nothing. */
+.lite .glass { background: rgba(40, 40, 44, 0.9); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.lite #panel { background: rgb(28, 28, 30); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.lite .capsule button svg { filter: none; }
+
 /* ---------- Accessibility settings ---------- */
 @media (prefers-reduced-transparency: reduce) {
   .glass { background: rgba(40, 40, 44, 0.94); -webkit-backdrop-filter: none; backdrop-filter: none; }
@@ -640,4 +924,6 @@ body.fullscreen .i-shrink { display: block; }
   #start.revealing .start-bg { transition-duration: 0.01s; }
   #trackList .current .track-num i { animation: none; transform: scaleY(0.6); }
   .segmented .thumb { transition: none; }
+  .fav-btn[aria-pressed="true"] .i-heart-fill { animation: none; }
+  .toast { transition: opacity 0.2s ease; }
 }
