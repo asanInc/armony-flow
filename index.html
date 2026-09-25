@@ -62,28 +62,28 @@
   </div>
 
   <aside id="panel" hidden data-i18n-label="panel">
-    <header>
-      <span data-i18n="settings">Settings</span>
-      <button id="closePanel" type="button" data-i18n-label="close">
+    <header class="panel-head">
+      <div class="tabs" role="tablist">
+        <button id="tabMusic" class="tab" type="button" role="tab" aria-selected="true" aria-controls="paneMusic" data-i18n="music">Music</button>
+        <button id="tabPhotos" class="tab" type="button" role="tab" aria-selected="false" aria-controls="panePhotos" data-i18n="photos">Photos</button>
+      </div>
+      <div id="langToggle" class="lang" role="group" data-i18n-label="language"></div>
+      <button id="closePanel" class="icon-btn" type="button" data-i18n-label="close">
         <svg viewBox="0 0 24 24"><path class="stroke" d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </header>
-    <section>
-      <h3 data-i18n="photos">Photos</h3>
-      <div class="chips" id="photoChips"></div>
-    </section>
-    <section>
-      <h3 data-i18n="music">Music</h3>
-      <div class="chips" id="musicChips"></div>
-    </section>
-    <section>
-      <h3 data-i18n="language">Language</h3>
-      <div class="chips" id="langChips"></div>
-    </section>
-    <section class="playlist">
-      <h3 data-i18n="playlist">Playlist</h3>
-      <ol id="trackList"></ol>
-    </section>
+
+    <!-- the only scroll container in the panel: no nested scrolling on small screens -->
+    <div class="panel-body">
+      <section id="paneMusic" role="tabpanel" aria-labelledby="tabMusic">
+        <div id="musicCards" class="music-cards"></div>
+        <h3 class="list-head"><span data-i18n="playlist">Playlist</span><span id="trackCount"></span></h3>
+        <ol id="trackList"></ol>
+      </section>
+      <section id="panePhotos" role="tabpanel" aria-labelledby="tabPhotos" hidden>
+        <div id="photoCards" class="photo-cards"></div>
+      </section>
+    </div>
   </aside>
 
   <audio id="audio" preload="auto"></audio>

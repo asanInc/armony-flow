@@ -25,7 +25,7 @@ const I18N = {
     fullscreen: 'Tela cheia',
     exitFullscreen: 'Sair da tela cheia',
     panel: 'Playlist e estilos',
-    settings: 'Ajustes',
+    tracks: 'faixas',
     close: 'Fechar',
     photos: 'Fotos',
     music: 'Música',
@@ -48,7 +48,7 @@ const I18N = {
     fullscreen: 'Full screen',
     exitFullscreen: 'Exit full screen',
     panel: 'Playlist and styles',
-    settings: 'Settings',
+    tracks: 'tracks',
     close: 'Close',
     photos: 'Photos',
     music: 'Music',
@@ -58,7 +58,7 @@ const I18N = {
   },
 };
 
-const LANGUAGES = { pt: { label: 'Português' }, en: { label: 'English' } };
+const LANGUAGES = { pt: { label: 'PT', name: 'Português' }, en: { label: 'EN', name: 'English' } };
 
 // Time zones of Portuguese-speaking countries: catches people in Brazil, Portugal, etc.
 // even when their browser is set to English
@@ -77,21 +77,64 @@ let lang = 'en';
 const t = (key) => I18N[lang][key] ?? key;
 const label = (item) => item.label[lang] ?? item.label;
 
-// Wikimedia Commons "Featured pictures of …" categories
+// Wikimedia Commons "Featured pictures of …" categories. `cover` is the Commons file
+// shown on the style's card in the settings panel.
 const PHOTO_STYLES = {
-  landscapes: { label: { pt: 'Paisagens', en: 'Landscapes' }, categories: ['landscapes'] },
-  mountains: { label: { pt: 'Montanhas', en: 'Mountains' }, categories: ['mountains', 'volcanoes'] },
-  water: { label: { pt: 'Água', en: 'Water' }, categories: ['coasts', 'beaches', 'lakes', 'waterfalls', 'bodies_of_water', 'islands'] },
-  forests: { label: { pt: 'Florestas', en: 'Forests' }, categories: ['forests', 'parks', 'gardens'] },
-  countryside: { label: { pt: 'Campo', en: 'Countryside' }, categories: ['agriculture'] },
-  cities: { label: { pt: 'Cidades', en: 'Cities' }, categories: ['cityscapes'] },
-  everything: { label: { pt: 'Tudo', en: 'Everything' }, categories: ['landscapes', 'mountains', 'coasts', 'beaches', 'lakes', 'waterfalls', 'forests', 'agriculture', 'cityscapes'] },
+  landscapes: {
+    label: { pt: 'Paisagens', en: 'Landscapes' },
+    categories: ['landscapes'],
+    cover: '2014 Track on Fremington Edge.jpg',
+  },
+  mountains: {
+    label: { pt: 'Montanhas', en: 'Mountains' },
+    categories: ['mountains', 'volcanoes'],
+    cover: '1 lake louise pano 2019.jpg',
+  },
+  water: {
+    label: { pt: 'Água', en: 'Water' },
+    categories: ['coasts', 'beaches', 'lakes', 'waterfalls', 'bodies_of_water', 'islands'],
+    cover: 'Kuang Si Falls and a turquoise water pool in Luang Prabang province Laos.jpg',
+  },
+  forests: {
+    label: { pt: 'Florestas', en: 'Forests' },
+    categories: ['forests', 'parks', 'gardens'],
+    cover: 'Ansberg Blickrichtung Süden 120324.jpg',
+  },
+  countryside: {
+    label: { pt: 'Campo', en: 'Countryside' },
+    categories: ['agriculture'],
+    cover: '2014.08.09.-11-Durbach--Weingut Schloss Staufenberg.jpg',
+  },
+  cities: {
+    label: { pt: 'Cidades', en: 'Cities' },
+    categories: ['cityscapes'],
+    cover: '13-08-09-peak-by-RalfR-01.jpg',
+  },
+  everything: {
+    label: { pt: 'Tudo', en: 'Everything' },
+    categories: ['landscapes', 'mountains', 'coasts', 'beaches', 'lakes', 'waterfalls', 'forests', 'agriculture', 'cityscapes'],
+    cover: 'Gokyo Ri summit, Gokyo Lake, Nepal, Himalayas.jpg',
+  },
+};
+
+const coverUrl = (file) =>
+  `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}?width=500`;
+
+// 24×24 icons for the music style cards
+const ICONS = {
+  headphones: '<path class="stroke" d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="14" width="4.5" height="6.5" rx="1.5"/><rect x="16.5" y="14" width="4.5" height="6.5" rx="1.5"/>',
+  vinyl: '<circle class="stroke" cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.5"/><path class="stroke thin" d="M12 6.5a5.5 5.5 0 0 1 5.5 5.5"/>',
+  piano: '<rect class="stroke" x="3.5" y="5" width="17" height="14" rx="2"/><path d="M8 5h2.2v8H8zM13.8 5H16v8h-2.2z"/><path class="stroke thin" d="M9.1 13v6M14.9 13v6M12 5v14"/>',
+  notes: '<path class="stroke" d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>',
+  leaf: '<path class="stroke" d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/><path class="stroke thin" d="M5 19l8-8"/>',
 };
 
 // Internet Archive items licensed under Creative Commons or in the public domain
 const MUSIC_STYLES = {
   lofi: {
     label: 'Lofi',
+    icon: 'headphones',
+    hue: 280,
     items: [
       'chillhop-raw-cuts',                       // Chillhop Music — CC BY-NC-ND 4.0
       'loyalty-freak-music-lofi-ambient-songs',  // Loyalty Freak Music — CC0
@@ -101,6 +144,8 @@ const MUSIC_STYLES = {
   },
   jazz: {
     label: 'Jazz',
+    icon: 'vinyl',
+    hue: 30,
     items: [
       'DWK123',  // ProleteR — Curses From Past Times — CC BY-NC-ND 3.0
       'DWK127',  // Kova — Cookin' Session — CC BY-NC-ND 3.0
@@ -109,6 +154,8 @@ const MUSIC_STYLES = {
   },
   piano: {
     label: 'Piano',
+    icon: 'piano',
+    hue: 215,
     items: [
       'ca315_fp',                                // Fabrizio Paterlini — Viandanze — CC BY-NC-ND 3.0
       'WM056',                                   // Lee Rosevere — Play 2 — CC BY-NC-SA 2.5
@@ -119,6 +166,8 @@ const MUSIC_STYLES = {
   },
   classical: {
     label: { pt: 'Clássica', en: 'Classical' },
+    icon: 'notes',
+    hue: 350,
     items: [
       'musopen-chopin',  // Musopen — Chopin's complete works — CC0
       'Musopen-Libre',   // Musopen — symphonies — CC BY-SA 3.0
@@ -126,6 +175,8 @@ const MUSIC_STYLES = {
   },
   nature: {
     label: { pt: 'Natureza', en: 'Nature' },
+    icon: 'leaf',
+    hue: 140,
     items: [
       'relaxingrainsounds',          // rain — CC0
       'ocean-sea-sounds',            // ocean — CC0
@@ -368,7 +419,7 @@ function tick(now) {
 async function setPhotoStyle(style) {
   state.photoStyle = style;
   storage('armony:photoStyle', style);
-  renderChips();
+  renderStyles();
   const list = await loadPhotoStyle(style);
   if (state.photoStyle !== style) return;
   state.photos = list;
@@ -403,7 +454,7 @@ function loadMusicStyle(style) {
 async function setMusicStyle(style) {
   state.musicStyle = style;
   storage('armony:musicStyle', style);
-  renderChips();
+  renderStyles();
   const tracks = await loadMusicStyle(style);
   if (state.musicStyle !== style) return;
   state.tracks = shuffle(tracks.slice());
@@ -492,39 +543,74 @@ if ('mediaSession' in navigator) {
 
 // ---------- playlist panel ----------
 
-function renderChips() {
-  const build = (container, styles, current, onPick) => {
-    container.replaceChildren(...Object.entries(styles).map(([key, item]) => {
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'chip';
-      chip.textContent = label(item);
-      chip.setAttribute('aria-pressed', String(key === current));
-      chip.addEventListener('click', () => key !== current && onPick(key));
-      return chip;
-    }));
-  };
-  build($('#photoChips'), PHOTO_STYLES, state.photoStyle, setPhotoStyle);
-  build($('#musicChips'), MUSIC_STYLES, state.musicStyle, setMusicStyle);
-  build($('#langChips'), LANGUAGES, lang, setLang);
+function styleCard(key, current, onPick, content) {
+  const card = document.createElement('button');
+  card.type = 'button';
+  card.setAttribute('aria-pressed', String(key === current));
+  card.addEventListener('click', () => key !== current && onPick(key));
+  card.append(...content);
+  return card;
+}
+
+function renderStyles() {
+  $('#musicCards').replaceChildren(...Object.entries(MUSIC_STYLES).map(([key, style]) => {
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    icon.setAttribute('viewBox', '0 0 24 24');
+    icon.innerHTML = ICONS[style.icon];
+    const name = document.createElement('span');
+    name.textContent = label(style);
+    const card = styleCard(key, state.musicStyle, setMusicStyle, [icon, name]);
+    card.className = 'music-card';
+    card.style.setProperty('--hue', style.hue);
+    return card;
+  }));
+
+  $('#photoCards').replaceChildren(...Object.entries(PHOTO_STYLES).map(([key, style]) => {
+    const img = document.createElement('img');
+    img.src = coverUrl(style.cover);
+    img.alt = '';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    const name = document.createElement('span');
+    name.textContent = label(style);
+    const card = styleCard(key, state.photoStyle, setPhotoStyle, [img, name]);
+    card.className = 'photo-card';
+    return card;
+  }));
+
+  $('#langToggle').replaceChildren(...Object.entries(LANGUAGES).map(([key, item]) => {
+    const btn = styleCard(key, lang, setLang, [item.label]);
+    btn.title = item.name;
+    btn.setAttribute('aria-label', item.name);
+    return btn;
+  }));
 }
 
 function renderPlaylist() {
   const list = $('#trackList');
+  $('#trackCount').textContent = state.tracks.length ? `${state.tracks.length} ${t('tracks')}` : '';
   list.replaceChildren(...state.tracks.map((track, i) => {
     const li = document.createElement('li');
     const btn = document.createElement('button');
     btn.type = 'button';
+    const num = document.createElement('span');
+    num.className = 'track-num';
+    num.textContent = i + 1;
+    const text = document.createElement('span');
+    text.className = 'track-text';
     const title = document.createElement('span');
     title.className = 'track-title';
     title.textContent = track.title;
     const artist = document.createElement('span');
     artist.className = 'track-artist';
     artist.textContent = track.artist;
-    btn.append(title, artist);
+    text.append(title, artist);
+    btn.append(num, text);
     if (i === state.trackIndex && state.started) {
       li.className = 'current';
       btn.setAttribute('aria-current', 'true');
+      // animated equalizer in place of the number
+      num.replaceChildren(...[0, 1, 2].map(() => document.createElement('i')));
     }
     btn.addEventListener('click', () => playTrack(i));
     li.append(btn);
@@ -539,12 +625,32 @@ function renderPlaylist() {
 }
 
 const panel = $('#panel');
+const panelBody = $('.panel-body');
 const panelOpen = () => !panel.hidden;
+let panelTab = 'music';
+
+function setTab(tab) {
+  panelTab = tab;
+  for (const [name, tabEl, pane] of [['music', $('#tabMusic'), $('#paneMusic')], ['photos', $('#tabPhotos'), $('#panePhotos')]]) {
+    tabEl.setAttribute('aria-selected', String(name === tab));
+    pane.hidden = name !== tab;
+  }
+  panel.dataset.tab = tab;
+  panelBody.scrollTop = 0;
+  if (tab === 'music') scrollToCurrentTrack();
+}
+
+function scrollToCurrentTrack() {
+  const current = $('#trackList .current');
+  if (!current) return;
+  const target = current.offsetTop - (panelBody.clientHeight - current.offsetHeight) / 2;
+  panelBody.scrollTop = Math.max(0, target);
+}
 
 function setPanel(open) {
   panel.hidden = !open;
   $('#listBtn').setAttribute('aria-expanded', String(open));
-  if (open) $('#trackList .current')?.scrollIntoView({ block: 'center' });
+  if (open) setTab(panelTab);
   wake();
 }
 
@@ -568,7 +674,7 @@ function applyI18n() {
   document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en';
   document.querySelectorAll('[data-i18n]').forEach((el) => (el.textContent = t(el.dataset.i18n)));
   document.querySelectorAll('[data-i18n-label]').forEach((el) => setButtonLabel(el, el.dataset.i18nLabel));
-  renderChips();
+  renderStyles();
   renderPlaylist();
   renderPhotoCredit();
 }
@@ -625,6 +731,8 @@ $('#nextBtn').addEventListener('click', nextTrack);
 $('#muteBtn').addEventListener('click', () => setMuted(!audio.muted));
 $('#listBtn').addEventListener('click', () => setPanel(!panelOpen()));
 $('#closePanel').addEventListener('click', () => setPanel(false));
+$('#tabMusic').addEventListener('click', () => setTab('music'));
+$('#tabPhotos').addEventListener('click', () => setTab('photos'));
 $('#fsBtn').addEventListener('click', toggleFullscreen);
 
 // Clicking outside the panel closes it

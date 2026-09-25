@@ -7,7 +7,7 @@ High-resolution landscapes that drift and dissolve into each other, over a sound
 
 [**▶ Open Armony Flow**](https://asaninc.github.io/armony-flow/)
 
-![Armony Flow showing an aerial mountain valley in full screen, with minimal playback controls in the corner](docs/frame.jpg)
+![Armony Flow showing a stone bridge over autumn moorland in full screen, with minimal playback controls in the corner](docs/frame.jpg)
 
 </div>
 
@@ -24,11 +24,12 @@ It has no account, no ads, no API keys and no build step. It's three static file
 - 🎵 **Five music styles**: Lofi, Jazz, Piano, Classical and Nature. All tracks are Creative Commons or public domain, streamed from the Internet Archive.
 - 🏔 **Seven photo styles**: Landscapes, Mountains, Water, Forests, Countryside, Cities, or Everything.
 - 📃 **Playlist**: see what's playing, jump to any track, skip forward or back.
+- 🎛 **Settings panel that fits any screen**: Music and Photos tabs, style cards with cover photos, and a single scroll area. It opens as a floating panel on desktop and tablets, a bottom sheet on phones held upright, and a side sheet on phones held sideways.
 - 🌍 **English and Portuguese**: picked automatically from your browser language and time zone, and can be switched at any time.
 - 🖥 **Made to run all day**: keeps the screen awake, hides the controls when idle, and works with media keys, Bluetooth headphones and the iPad lock screen.
 - 📱 **Works on phones and tablets**: covers the whole screen on iPad and iPhone, notch and rounded corners included.
 
-![The settings panel with photo style, music style, language and the playlist](docs/panel.jpg)
+![The settings panel, open on the Music tab: five music style cards above the playlist, with a PT/EN language switch at the top](docs/panel.jpg)
 
 ## Controls
 
@@ -37,7 +38,7 @@ It has no account, no ads, no API keys and no build step. It's three static file
 | ⏮ | `B` | Previous track (restarts the current one if it has played for more than 3 s) |
 | ⏯ | `Space` | Pause or resume both the photos and the music |
 | ⏭ | `N` | Next track |
-| ☰ | `P` | Open the settings panel: photo style, music style, language, playlist |
+| ☰ | `P` | Open the settings panel: music style and playlist, photo style, language |
 | 🔊 | `M` | Mute / unmute |
 | ⛶ | `F` | Full screen |
 | | `→` | Next photo |
@@ -110,13 +111,13 @@ Armony Flow is plain HTML, CSS and JavaScript, with no framework and no dependen
 
 ```
 index.html   markup and controls
-style.css    layout, transitions, panel
+style.css    layout, transitions, settings panel
 app.js       photos, music, playlist, i18n, controls
 docs/        screenshots for this README
 ```
 
 ## Credits
 
-- Photos by the many photographers of [Wikimedia Commons](https://commons.wikimedia.org). The photo in the screenshots is *ARG-2016-Aerial-Tierra del Fuego (Ushuaia)–Valle Carbajal 01* by Godot13, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+- Photos by the many photographers of [Wikimedia Commons](https://commons.wikimedia.org). The photo in the screenshots is *2013 Cogden Bridge* by Kreuzschnabel, [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/). The cover photos on the style cards are Featured Pictures credited on their Commons pages.
 - Music by the artists listed above, via the [Internet Archive](https://archive.org).
 - Built with [Claude Code](https://claude.com/claude-code).
