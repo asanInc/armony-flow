@@ -27,6 +27,7 @@ It has no account, no ads, no API keys and no build step. It's three static file
 - 🌧 **Nature sounds**: switch on rain, waves, birds or a crackling fireplace over the music, each with its own volume.
 - 🔊 **Real volume control**, even on iPhone and iPad, where Safari normally ignores it (the audio goes through Web Audio).
 - ⏱ **Time per photo**: 15 seconds, 30 seconds, 1 minute or 5 minutes.
+- 🖼 **Frame mode**: the photo holds still inside a light or dark mat, like a framed print on the wall. The window in the mat is cut once for the screen and never moves; only the photo changes inside it. The clock becomes a single line printed on the mat under the photo.
 - 🕰 **Clock**: an optional lock-screen style clock with the date, so the frame can sit on a desk.
 - 🌙 **Sleep timer**: 15, 30 or 60 minutes. While it runs, a moon with the time left sits in the control bar. Over the last minute the music and the screen fade out, then everything pauses and the screen is allowed to turn off until someone taps it.
 - 📺 **Show on TV**: in Chrome, sends the frame to a Chromecast or smart TV and turns your phone or computer into the remote. On Apple devices, the app points to Screen Mirroring.

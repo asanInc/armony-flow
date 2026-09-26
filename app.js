@@ -13,6 +13,7 @@ const CONFIG = {
   maxRecent: 30,           // photos remembered for starting offline
   clockPositions: ['left', 'center', 'right', 'middle'],
   clockSizes: ['small', 'medium', 'large'],
+  mats: ['light', 'dark'],
 };
 
 // ---------- languages ----------
@@ -54,6 +55,14 @@ const I18N = {
     clockCenter: 'No alto, ao centro',
     clockRight: 'No alto, à direita',
     clockMiddle: 'No meio da tela',
+    clockBelowLeft: 'Embaixo da foto, à esquerda',
+    clockBelowCenter: 'Embaixo da foto, ao centro',
+    clockBelowRight: 'Embaixo da foto, à direita',
+    frameMode: 'Modo quadro',
+    frameHelp: 'A foto fica parada dentro de um passe-partout, como um quadro na parede.',
+    matColor: 'Cor do passe-partout',
+    matLight: 'Claro',
+    matDark: 'Escuro',
     photoStyle: 'Estilo',
     sleepTimer: 'Timer para dormir',
     sleepOff: 'Desligado',
@@ -115,6 +124,14 @@ const I18N = {
     clockCenter: 'Top center',
     clockRight: 'Top right',
     clockMiddle: 'Middle of the screen',
+    clockBelowLeft: 'Under the photo, left',
+    clockBelowCenter: 'Under the photo, center',
+    clockBelowRight: 'Under the photo, right',
+    frameMode: 'Frame mode',
+    frameHelp: 'The photo stays still inside a mat, like a framed print on the wall.',
+    matColor: 'Mat color',
+    matLight: 'Light',
+    matDark: 'Dark',
     photoStyle: 'Style',
     sleepTimer: 'Sleep timer',
     sleepOff: 'Off',
@@ -248,6 +265,10 @@ const ICONS = {
   posLeft: '<rect class="stroke" x="3" y="5" width="18" height="14" rx="2.5"/><rect x="5.8" y="7.8" width="6" height="3" rx="1"/>',
   posCenter: '<rect class="stroke" x="3" y="5" width="18" height="14" rx="2.5"/><rect x="9" y="7.8" width="6" height="3" rx="1"/>',
   posRight: '<rect class="stroke" x="3" y="5" width="18" height="14" rx="2.5"/><rect x="12.2" y="7.8" width="6" height="3" rx="1"/>',
+  // frame mode: the photo's window in the mat, with the clock line under it
+  posBelowLeft: '<rect class="stroke" x="3" y="5" width="18" height="14" rx="2.5"/><rect x="6" y="7.5" width="12" height="6.5" rx="0.8" fill-opacity="0.35"/><rect x="6" y="15.4" width="5" height="1.7" rx="0.85"/>',
+  posBelowCenter: '<rect class="stroke" x="3" y="5" width="18" height="14" rx="2.5"/><rect x="6" y="7.5" width="12" height="6.5" rx="0.8" fill-opacity="0.35"/><rect x="9.5" y="15.4" width="5" height="1.7" rx="0.85"/>',
+  posBelowRight: '<rect class="stroke" x="3" y="5" width="18" height="14" rx="2.5"/><rect x="6" y="7.5" width="12" height="6.5" rx="0.8" fill-opacity="0.35"/><rect x="13" y="15.4" width="5" height="1.7" rx="0.85"/>',
   posMiddle: '<rect class="stroke" x="3" y="5" width="18" height="14" rx="2.5"/><rect x="7.5" y="10.2" width="9" height="3.6" rx="1.2"/>',
   flame: '<path d="M12 21.5c-3.9 0-6.5-2.6-6.5-6.2 0-3 1.8-5 3.4-6.8.5-.6 1.5-.2 1.5.6 0 1 .6 1.8 1.4 1.8.7 0 1.2-.6 1.2-1.4 0-1.8-.6-3.4-1.3-4.7-.4-.7.3-1.5 1-1.1 3.6 2 6.8 6.1 6.8 10.5 0 4.2-3 7.3-7.5 7.3z"/>',
 };
@@ -348,6 +369,8 @@ const state = {
   clock: false,
   clockPos: 'center',
   clockSize: 'medium',
+  frame: false,      // frame mode: a still photo in a mat
+  mat: 'light',
   sleepAt: 0,
   sleepMinutes: 0,
   sleeping: false,
@@ -652,6 +675,7 @@ async function preloadNext() {
 
 function kenBurns(img) {
   img.getAnimations().forEach((a) => a.cancel());
+  if (state.frame) return;   // a framed print holds still
   const zoomIn = Math.random() > 0.35;
   const small = rand(1.02, 1.06);
   const big = rand(1.14, 1.22);
@@ -1044,6 +1068,52 @@ function setClockPos(pos) {
   syncCast();
 }
 
+// ---------- frame mode ----------
+
+const stage = $('#stage');
+
+function applyFrame() {
+  body.classList.toggle('frame', state.frame);
+  body.dataset.mat = state.mat;
+  // in the mat the clock sits under the photo, so its positions read differently
+  renderPickers();
+  // the photos in place start moving again, or come to rest
+  slides.forEach((slide) => {
+    const img = slide.querySelector('img');
+    if (img) kenBurns(img);
+  });
+}
+
+let frameTimer;
+function setFrame(on) {
+  state.frame = on;
+  storage('armony:frame', on ? '1' : '0');
+  $('#frameToggle').checked = on;
+  $('#matRow').hidden = !on;
+  syncCast();
+  clearTimeout(frameTimer);
+  if (!state.started || reducedMotion.matches) {
+    stage.classList.remove('switching', 'hiding');
+    applyFrame();
+    return;
+  }
+  // the photo fades out, the layout changes out of sight, then it fades back in
+  stage.classList.add('switching', 'hiding');
+  frameTimer = setTimeout(() => {
+    applyFrame();
+    stage.classList.remove('hiding');
+    frameTimer = setTimeout(() => stage.classList.remove('switching'), 450);
+  }, 450);
+}
+
+function setMat(mat) {
+  state.mat = mat;
+  storage('armony:mat', mat);
+  body.dataset.mat = mat;
+  renderPickers();
+  syncCast();
+}
+
 // ---------- sleep timer ----------
 
 const shade = $('#sleepShade');
@@ -1169,6 +1239,8 @@ function syncCast() {
     clock: state.clock,
     clockPos: state.clockPos,
     clockSize: state.clockSize,
+    frame: state.frame,
+    mat: state.mat,
     favorites: state.favorites,
   }), 60);
 }
@@ -1250,6 +1322,8 @@ function applyRemote(message) {
     if (message.clock !== state.clock) setClock(message.clock);
     if (message.clockPos !== state.clockPos && CONFIG.clockPositions.includes(message.clockPos)) setClockPos(message.clockPos);
     if (message.clockSize !== state.clockSize && CONFIG.clockSizes.includes(message.clockSize)) setClockSize(message.clockSize);
+    if (message.mat !== state.mat && CONFIG.mats.includes(message.mat)) setMat(message.mat);
+    if (typeof message.frame === 'boolean' && message.frame !== state.frame) setFrame(message.frame);
     state.favorites = message.favorites || [];
     if (message.photoStyle !== state.photoStyle) setPhotoStyle(message.photoStyle);
     for (const key of Object.keys(AMBIENT)) {
@@ -1386,11 +1460,17 @@ function renderPicker(container, options, current, onPick) {
 function renderPickers() {
   const durationText = (ms) => (ms < 60000 ? `${ms / 1000} s` : `${ms / 60000} min`);
   renderPicker($('#durationPicker'), CONFIG.durations.map((ms) => ({ value: ms, text: durationText(ms) })), state.slideMs, setDuration);
-  const posIcon = { left: 'posLeft', center: 'posCenter', right: 'posRight', middle: 'posMiddle' };
-  const posKey = { left: 'clockLeft', center: 'clockCenter', right: 'clockRight', middle: 'clockMiddle' };
+  const posIcon = state.frame
+    ? { left: 'posBelowLeft', center: 'posBelowCenter', right: 'posBelowRight', middle: 'posMiddle' }
+    : { left: 'posLeft', center: 'posCenter', right: 'posRight', middle: 'posMiddle' };
+  const posKey = state.frame
+    ? { left: 'clockBelowLeft', center: 'clockBelowCenter', right: 'clockBelowRight', middle: 'clockMiddle' }
+    : { left: 'clockLeft', center: 'clockCenter', right: 'clockRight', middle: 'clockMiddle' };
   renderPicker($('#clockPosPicker'), CONFIG.clockPositions.map((pos) => ({ value: pos, icon: posIcon[pos], title: t(posKey[pos]) })), state.clockPos, setClockPos);
   const sizeKey = { small: 'sizeSmall', medium: 'sizeMedium', large: 'sizeLarge' };
   renderPicker($('#clockSizePicker'), CONFIG.clockSizes.map((size) => ({ value: size, text: t(sizeKey[size]) })), state.clockSize, setClockSize);
+  const matKey = { light: 'matLight', dark: 'matDark' };
+  renderPicker($('#matPicker'), CONFIG.mats.map((mat) => ({ value: mat, text: t(matKey[mat]) })), state.mat, setMat);
   renderPicker($('#sleepPicker'), CONFIG.sleepOptions.map((m) => ({ value: m, text: m ? (m < 1 ? `${m * 60} s` : m < 60 ? `${m} min` : `${m / 60} h`) : t('sleepOff') })), state.sleepMinutes, setSleep);
 }
 
@@ -1511,6 +1591,7 @@ const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
 function setPanel(open) {
   $('#listBtn').setAttribute('aria-expanded', String(open));
+  body.classList.toggle('panel-open', open);
   if (open) {
     panel.classList.remove('closing');
     panel.style.transform = '';
@@ -1668,6 +1749,7 @@ $('#fsBtn').addEventListener('click', toggleFullscreen);
 $('#volume').addEventListener('input', (e) => setVolume(Number(e.target.value)));
 $('#clockToggle').addEventListener('change', (e) => setClock(e.target.checked));
 $('#liteToggle').addEventListener('change', (e) => setLite(e.target.checked));
+$('#frameToggle').addEventListener('change', (e) => setFrame(e.target.checked));
 
 // Tapping the photo closes the panel; the control bar stays usable while it's open
 document.addEventListener('pointerdown', (e) => {
@@ -1739,6 +1821,12 @@ $('#clock').hidden = !state.clock;
 $('#clock').dataset.pos = state.clockPos;
 $('#clockToggle').checked = state.clock;
 $('#clockPosRow').hidden = !state.clock;
+state.frame = storage('armony:frame') === '1';
+const savedMat = storage('armony:mat');
+if (CONFIG.mats.includes(savedMat)) state.mat = savedMat;
+$('#frameToggle').checked = state.frame;
+$('#matRow').hidden = !state.frame;
+applyFrame();
 if (isReceiver) body.classList.add('receiver');
 if (lite) body.classList.add('lite');
 $('#liteToggle').checked = lite;

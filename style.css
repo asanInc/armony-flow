@@ -25,7 +25,10 @@
   --safe-bottom: max(var(--edge), env(safe-area-inset-bottom));
   --safe-left: max(var(--edge), env(safe-area-inset-left));
   --panel-font: clamp(15px, 0.9vmin + 8px, 19px);
+  --screen-h: 100vh;
 }
+/* the visible height, without Safari's bars */
+@supports (height: 100dvh) { :root { --screen-h: 100dvh; } }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -87,6 +90,65 @@ svg .stroke { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap:
   pointer-events: none;
   background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.35) 100%);
 }
+
+/* ---------- Frame mode ----------
+   A still photo in a mat, like a framed print. The window in the mat is cut once for the
+   screen and never changes: photos fill it (cover, as in full screen) and only the photo
+   crossfades. Its shape follows the screen within 1.4–1.7, so the margins stay close to
+   even without cropping much; the bottom margin is a little wider, as framers do.
+   The clock sits under the window, like the pencil line under a print. */
+.frame {
+  --mat: clamp(28px, 10vmin, 160px);
+  --mat-top: var(--mat);
+  --mat-bottom: calc(var(--mat) * 1.25);
+  --avail-w: calc(100vw - var(--mat) * 2);
+  --avail-h: calc(var(--screen-h) - var(--mat-top) - var(--mat-bottom));
+  --win-w: min(var(--avail-w), var(--avail-h) * 1.7);
+  --win-h: min(var(--avail-h), var(--win-w) / 1.4);
+  --win-left: calc((100vw - var(--win-w)) / 2);
+  --win-top: calc(var(--mat-top) + (var(--avail-h) - var(--win-h)) / 2);
+  --paper: #e9e7e2;
+  --bevel: #f9f8f5;
+  --ink: #1d1d1f;
+  --ink-2: rgba(29, 29, 31, 0.6);
+}
+.frame[data-mat="dark"] {
+  --paper: #1c1c1e;
+  --bevel: #2c2c2e;
+  --ink: #fff;
+  --ink-2: rgba(235, 235, 245, 0.6);
+}
+
+#stage { background-color: #000; transition: background-color 0.5s ease; }
+.frame #stage {
+  background-color: var(--paper);
+  /* light falls from above: a touch brighter at the top of the mat */
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.04));
+}
+.frame .vignette { display: none; }
+
+.frame .slide,
+.mat-window {
+  inset: auto;
+  top: var(--win-top);
+  left: var(--win-left);
+  width: var(--win-w);
+  height: var(--win-h);
+}
+.frame .slide img { will-change: auto; }
+/* the bevelled edge of the mat around the window, and its shadow falling onto the photo;
+   it stays put while the photos change underneath */
+.mat-window { display: none; position: absolute; pointer-events: none; }
+.frame .mat-window {
+  display: block;
+  box-shadow:
+    0 0 0 max(2px, 0.28vmin) var(--bevel),
+    inset 0 max(1px, 0.2vmin) max(3px, 0.6vmin) rgba(0, 0, 0, 0.35);
+}
+
+/* switching frame mode on or off: the photo fades out, the layout changes, it fades back in */
+#stage.switching .slide { transition-duration: 0.45s; }
+#stage.switching.hiding .slide { opacity: 0; }
 
 /* ---------- Liquid Glass ----------
    Clear variant for controls over the photo (HIG: "components that float above media").
@@ -381,6 +443,50 @@ body.idle #ui { opacity: 0; visibility: hidden; transition: opacity 0.8s ease, v
   /* a close shadow for the edge and a long, soft one for depth over bright photos */
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.16), 0 12px 48px rgba(0, 0, 0, 0.26);
 }
+
+/* Frame mode: the clock is a single line printed on the mat under the window, like the
+   pencil line under a print, lined up with the window's left edge, center or right edge.
+   It never takes space from the photo. In the middle of the screen it stays over the photo. */
+.frame .clock:not([data-pos="middle"]) {
+  --cap: max(15px, var(--mat) * 0.42);
+  top: calc(var(--win-top) + var(--win-h) + var(--mat) * 0.3);
+  left: var(--win-left);
+  right: auto;
+  width: var(--win-w);
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.55em;
+  font-size: var(--cap);
+}
+.frame .clock[data-size="small"]:not([data-pos="middle"]) { --cap: max(13px, var(--mat) * 0.32); }
+.frame .clock[data-size="large"]:not([data-pos="middle"]) { --cap: max(18px, var(--mat) * 0.56); }
+.frame .clock[data-pos="left"] { justify-content: flex-start; }
+.frame .clock[data-pos="center"] { justify-content: center; }
+.frame .clock[data-pos="right"] { justify-content: flex-end; }
+.frame .clock:not([data-pos="middle"]) .clock-time {
+  order: 1;
+  font-size: 1em;
+  font-weight: 500;
+  font-variation-settings: "wdth" 100, "opsz" 32;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  text-shadow: none;
+}
+.frame .clock:not([data-pos="middle"]) .clock-date {
+  order: 2;
+  margin: 0;
+  font-size: max(11px, 0.5em);
+  font-weight: 500;
+  color: var(--ink-2);
+  text-shadow: none;
+}
+.clock-time, .clock-date { transition: color 0.5s ease; }
+/* the controls share the bottom of the mat: the clock line steps aside while they show,
+   but stays while the panel is open, so changes to it can be seen */
+.frame .clock:not([data-pos="middle"]) { transition: opacity 0.8s ease; }
+.frame:not(.idle):not(.panel-open):not(.receiver) .clock:not([data-pos="middle"]) { opacity: 0; transition-duration: 0.3s; }
 
 /* glass pill that confirms an action for a moment */
 .toast {
@@ -874,6 +980,8 @@ body.fullscreen .i-shrink { display: block; }
   }
   /* the grabber and header drag the sheet, so the browser must not treat that as scrolling */
   .panel-head { padding-top: 0.6em; touch-action: none; }
+  /* a narrower mat, so the print isn't lost in paper on a tall screen */
+  .frame { --mat: 6vw; }
 }
 @keyframes sheet-in { from { transform: translateY(105%); } }
 @keyframes sheet-out { to { transform: translateY(105%); } }

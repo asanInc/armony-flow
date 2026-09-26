@@ -28,6 +28,7 @@
   <div id="stage">
     <div class="slide" id="slideA"><img alt="" /></div>
     <div class="slide" id="slideB"><img alt="" /></div>
+    <div class="mat-window" aria-hidden="true"></div>
     <div class="vignette"></div>
   </div>
 
@@ -139,6 +140,18 @@
         <div id="photoCards" class="photo-cards"></div>
       </section>
       <section id="paneDisplay" role="tabpanel" aria-labelledby="tabDisplay" hidden>
+        <div class="group">
+          <label class="row">
+            <span class="row-icon"><svg viewBox="0 0 24 24"><rect class="stroke" x="3" y="4" width="18" height="16" rx="2"/><rect class="stroke" x="7" y="8" width="10" height="8" rx="0.5"/></svg></span>
+            <span class="row-label" data-i18n="frameMode">Frame mode</span>
+            <input id="frameToggle" class="switch" type="checkbox" role="switch" />
+          </label>
+          <div id="matRow" class="row row-control" hidden>
+            <div id="matPicker" class="segmented picker" role="group" data-i18n-label="matColor"></div>
+          </div>
+        </div>
+        <p class="group-note" data-i18n="frameHelp">The photo stays still inside a mat, like a framed print on the wall.</p>
+
         <div class="group">
           <label class="row">
             <span class="row-icon"><svg viewBox="0 0 24 24"><circle class="stroke" cx="12" cy="12" r="8.5"/><path class="stroke" d="M12 7.5V12l3 2"/></svg></span>
